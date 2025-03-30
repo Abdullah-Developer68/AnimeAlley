@@ -1,17 +1,34 @@
 import { useSelector } from "react-redux";
 import { useEffect, useState } from "react";
-import Cards from "./Card";
+import Cards from "../Global/Card";
 import api from "../../api/api";
 
 const ProductGrid = () => {
   const [products, setProducts] = useState([]);
-  //Access the category state from the redux store
-  const currCategory = useSelector((state) => state.category.currCategory);
-  console.log(currCategory);
+  //Access the category state and filters of that category from the redux store
+  const currCategory = useSelector((state) => state.shop.currCategory);
+  const activeFilters = useSelector((state) => state.shop.activeFilters);
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await api.getProducts(currCategory.toLowerCase()); //gets products from server
+        // Format the filter data for the API
+        const productConstraints = {
+          activeFilters: activeFilters.activeFilters || [],
+          price: activeFilters.price || 0,
+          sortBy: activeFilters.sortBy || "popular",
+        };
+
+        console.log("Sending to API:", {
+          category: currCategory.toLowerCase(),
+          productConstraints,
+        });
+
+        const response = await api.getProducts(
+          currCategory.toLowerCase(),
+          productConstraints
+        );
+
         if (response.data.success) {
           setProducts(response.data.products);
         } else {
@@ -24,14 +41,14 @@ const ProductGrid = () => {
       }
     };
     fetchProducts();
-  }, [currCategory]);
+  }, [currCategory, activeFilters]);
 
   console.log("products");
   console.log(products);
 
   return (
-    <div className="w-1/2 h-[750px] overflow-auto">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
+    <div className="w-full h-[600px] overflow-auto">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 p-2">
         {/* Key prop helps React identify which items have changed, been added, or been removed in lists */}
         {products.map((product) => (
           <Cards key={product._id} product={product} />

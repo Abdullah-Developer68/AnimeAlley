@@ -28,11 +28,23 @@ const productSchema = new mongoose.Schema({
   size: {
     type: [String],
     required: function () {
-      return this.category === "clothes" || "shoes";
+      return this.category === "clothes" || this.category === "shoes";
+    },
+  },
+  merchType: {
+    type: [String],
+    required: function () {
+      return this.category === "clothes" || this.category === "shoes";
+    },
+  },
+  toyType: {
+    type: [String],
+    required: function () {
+      return this.category === "toys";
     },
   },
   genre: {
-    type: String,
+    type: [String],
     required: function () {
       return this.category === "comics";
     },

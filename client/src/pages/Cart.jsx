@@ -90,8 +90,8 @@ const Cart = () => {
                           +
                         </button>
                       </div>
-                      <p className="text-lg font-bold text-white/90">
-                        ₹{item.price}
+                      <p className="text-white/90 font-bold text-xs">
+                        Rs. {item.price}
                       </p>
                     </div>
                   </div>
@@ -108,16 +108,16 @@ const Cart = () => {
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between text-white/70">
                   <span>Items ({cartItems.length})</span>
-                  <span>₹1,498</span>
+                  <span>Rs. 1,498</span>
                 </div>
                 <div className="flex justify-between text-white/70">
                   <span>Shipping</span>
-                  <span>₹99</span>
+                  <span>Rs. 99</span>
                 </div>
                 <div className="border-t border-white/10 pt-4">
                   <div className="flex justify-between text-white font-bold">
                     <span>Total</span>
-                    <span>₹1,597</span>
+                    <span>Rs. 1,597</span>
                   </div>
                 </div>
               </div>

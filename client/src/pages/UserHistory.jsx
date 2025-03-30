@@ -86,11 +86,11 @@ const UserHistory = () => {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-white/90 font-medium">
-                            ₹{item.price * item.quantity}
+                          <p className="text-white/90 font-bold">
+                            Rs. {item.price * item.quantity}
                           </p>
-                          <p className="text-white/60 text-sm">
-                            ₹{item.price} per item
+                          <p className="text-white/70 text-sm">
+                            Rs. {item.price} per item
                           </p>
                         </div>
                       </div>
@@ -102,7 +102,7 @@ const UserHistory = () => {
                         Total Amount
                       </span>
                       <span className="text-lg font-bold text-pink-500">
-                        ₹{order.total}
+                        Rs. {order.total}
                       </span>
                     </div>
                   </div>

@@ -4,8 +4,9 @@ import Signup from "./pages/SignUp";
 import Login from "./pages/Login";
 import Cart from "./pages/Cart";
 import UserHistory from "./pages/UserHistory";
-import { Routes, Route } from "react-router-dom";
+import ProductDes from "./components/Shop/ProductDes";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { Routes, Route } from "react-router-dom";
 import "./App.css";
 
 function App() {
@@ -27,6 +28,14 @@ function App() {
         element={
           <ProtectedRoute>
             <Shop />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/shop/:id"
+        element={
+          <ProtectedRoute>
+            <ProductDes />
           </ProtectedRoute>
         }
       />

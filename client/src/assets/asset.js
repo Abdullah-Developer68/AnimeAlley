@@ -18,6 +18,10 @@ import google from "./img/signUpPics/google.svg";
 import house from "./img/shopPics/house.png";
 import prevBtn from "./img/shopPics/prev.svg";
 import nextBtn from "./img/shopPics/next.svg";
+import filter from "./img/shopPics/filter.jpg";
+import close from "./img/shopPics/close.png";
+import funnel from "./img/shopPics/funnel.svg";
+import bag from "./img/shopPics/bag.png";
 
 const assets = {
   logo,
@@ -40,6 +44,10 @@ const assets = {
   house,
   prevBtn,
   nextBtn,
+  filter,
+  close,
+  funnel,
+  bag,
 };
 
 export default assets;

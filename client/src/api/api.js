@@ -13,8 +13,12 @@ api.googleLogin = () => {
   window.location.href = "http://localhost:3000/googleAuth/login";
 };
 
-// get all products from http://localhost:3000/product/getProducts?category=Electronics
-api.getProducts = (category) =>
-  api.get("/product/getProducts", { params: { category } });
+// Changed to POST request for getting products
+api.getProducts = (category, productConstraints) =>
+  api.post("/product/getProducts", { category, productConstraints });
+
+// sending page number and getting total pages according to the number of products per page
+// api.getTotalPages = (category, productConstraints) =>
+//   api.post("/product/getTotalPages", { category, productConstraints });
 
 export default api;
