@@ -1,9 +1,13 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+// Get initial values from localStorage or use defaults
 const initialState = {
-  currCategory: "comics",
-  openFilterBar: false,
-  activeFilters: {},
+  currCategory: localStorage.getItem("currCategory") || "comics",
+  openFilterBar: JSON.parse(localStorage.getItem("openFilterBar")) || false,
+  activeFilters: JSON.parse(localStorage.getItem("activeFilters")) || {},
+  currPage: parseInt(localStorage.getItem("currPage")) || 1,
+  totalPages: parseInt(localStorage.getItem("totalPages")) || 1,
+  productData: JSON.parse(localStorage.getItem("productData")) || {},
 };
 
 export const shopSlice = createSlice({
@@ -15,18 +19,40 @@ export const shopSlice = createSlice({
     //state is used to access the current value of the property in initailState and payload contains values that are passed to it
     setCategory: (state, action) => {
       state.currCategory = action.payload;
+      localStorage.setItem("currCategory", action.payload);
     },
     openFilterBar: (state, action) => {
       state.openFilterBar = action.payload;
+      localStorage.setItem("openFilterBar", JSON.stringify(action.payload));
     },
     transferFilterData: (state, action) => {
       state.activeFilters = action.payload;
+      localStorage.setItem("activeFilters", JSON.stringify(action.payload));
+    },
+    updateCurrPage: (state, action) => {
+      state.currPage = action.payload;
+      localStorage.setItem("currPage", action.payload);
+    },
+    updateTotalPages: (state, action) => {
+      state.totalPages = action.payload;
+      localStorage.setItem("totalPages", action.payload);
+    },
+    transferProductData: (state, action) => {
+      state.productData = action.payload;
+      localStorage.setItem("productData", JSON.stringify(action.payload));
     },
   },
 });
 
 // Action creators are generated for each case reducer function by redux toolkit
 // Action creators are functions that create actions. They simply return an action object.
-export const { setCategory, openFilterBar, transferFilterData } =
-  shopSlice.actions;
+export const {
+  setCategory,
+  openFilterBar,
+  transferFilterData,
+  updateCurrPage,
+  updateTotalPages,
+  transferProductData,
+} = shopSlice.actions;
+
 export default shopSlice.reducer;

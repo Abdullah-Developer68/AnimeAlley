@@ -1,7 +1,15 @@
 import assets from "../../assets/asset";
+import { useDispatch } from "react-redux";
+import { transferProductData } from "../../redux/Slice/shopSlice";
 import { Link } from "react-router-dom";
+
 /* eslint-disable react/prop-types */
 const Cards = ({ product }) => {
+  const dispatch = useDispatch();
+  const sendProductData = () => {
+    console.log("Sending product data to Redux store:", product);
+    dispatch(transferProductData(product));
+  };
   return (
     <div
       key={product._id}
@@ -41,7 +49,12 @@ const Cards = ({ product }) => {
           </p>
           {/* Add to Cart Button with product._id as the url parameter */}
           <Link to={`/shop/:${product._id}`}>
-            <button className="cursor-pointer p-1 rounded-md bg-pink-500 text-black text-xs font-medium hover:shadow-lg hover:shadow-pink-500/25 transition-all duration-300">
+            <button
+              className="cursor-pointer p-1 rounded-md bg-pink-500 text-black text-xs font-medium hover:shadow-lg hover:shadow-pink-500/25 transition-all duration-300"
+              onClick={() => {
+                sendProductData(); // Call the function to send product data to Redux store
+              }}
+            >
               <img src={assets.bag} alt="add to cart" className="w-5" />
             </button>
           </Link>

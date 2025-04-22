@@ -1,13 +1,16 @@
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { updateTotalPages } from "../../redux/Slice/shopSlice";
 import { useEffect, useState } from "react";
 import Cards from "../Global/Card";
 import api from "../../api/api";
 
 const ProductGrid = () => {
   const [products, setProducts] = useState([]);
+  const dispatch = useDispatch();
   //Access the category state and filters of that category from the redux store
   const currCategory = useSelector((state) => state.shop.currCategory);
   const activeFilters = useSelector((state) => state.shop.activeFilters);
+  const currPage = useSelector((state) => state.shop.currPage);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -26,11 +29,13 @@ const ProductGrid = () => {
 
         const response = await api.getProducts(
           currCategory.toLowerCase(),
-          productConstraints
+          productConstraints,
+          currPage
         );
 
         if (response.data.success) {
-          setProducts(response.data.products);
+          setProducts(response.data.currPageProducts);
+          dispatch(updateTotalPages(response.data.totalPages));
         } else {
           console.error("Failed to fetch products:", response.data.message);
           setProducts([]);
@@ -41,7 +46,7 @@ const ProductGrid = () => {
       }
     };
     fetchProducts();
-  }, [currCategory, activeFilters]);
+  }, [currCategory, activeFilters, currPage]);
 
   console.log("products");
   console.log(products);

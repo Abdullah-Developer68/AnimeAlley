@@ -1,7 +1,7 @@
 const express = require("express");
 const dbConnect = require("./config/dbConnect");
 const dotenv = require("dotenv");
-const passport = require("./utils/passport"); // Initialize Passport configuration
+const passport = require("./config/passport"); // Initialize Passport configuration
 
 // Import custom middlewares
 const corsMiddleware = require("./middlewares/corsMiddleware");

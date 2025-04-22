@@ -14,11 +14,11 @@ api.googleLogin = () => {
 };
 
 // Changed to POST request for getting products
-api.getProducts = (category, productConstraints) =>
-  api.post("/product/getProducts", { category, productConstraints });
+api.getProducts = (category, productConstraints, currPage) =>
+  api.post("/product/getProducts", { category, productConstraints, currPage });
 
-// sending page number and getting total pages according to the number of products per page
-// api.getTotalPages = (category, productConstraints) =>
-//   api.post("/product/getTotalPages", { category, productConstraints });
+api.placeOrder = (data) => {
+  api.post("/order/placeOrder", { data });
+};
 
 export default api;

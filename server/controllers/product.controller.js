@@ -1,15 +1,13 @@
 const productModel = require("../models/product.model");
 
-let products;
-
 const getProducts = async (req, res) => {
   try {
-    const { category, productConstraints } = req.body;
+    const { category, productConstraints, currPage } = req.body;
 
-    if (!category) {
+    if (!category || !currPage) {
       return res.status(400).json({
         success: false,
-        message: "Category is required",
+        message: "Category and currPage is required",
       });
     }
 
@@ -39,7 +37,7 @@ const getProducts = async (req, res) => {
     }
 
     // Get products with the filters
-    products = await productModel.find(query);
+    let products = await productModel.find(query);
     console.log("Found Products:", products.length);
 
     // Sort products if sortBy is specified
@@ -61,29 +59,20 @@ const getProducts = async (req, res) => {
       }
     }
 
-    res.status(200).json({ success: true, products });
+    // Get products for current page using slice
+    const itemsPerPage = 20;
+    const startIndex = (currPage - 1) * itemsPerPage; // Assuming currPage starts from 1
+    const endIndex = startIndex + 20;
+    const currPageProducts = products.slice(startIndex, endIndex);
+    const totalPages = Math.ceil(products.length / 20); // Calculate total pages
+
+    res.status(200).json({ success: true, currPageProducts, totalPages });
   } catch (error) {
     console.error("Error while fetching products:", error.message);
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
 
-const sendTotalPages = async (req, res) => {
-  const { currPage } = req.body;
-  if (!currPage) {
-    return res.status(400).json({
-      success: false,
-      message: "Current page is required",
-    });
-  }
-  // const currProducts = products.slice(currPage * 20, (currPage + 1) * 20);
-  let currProducts = [];
-  for (let i = currPage * 20; i < products.length; i++) {
-    for (let j = i - 20; j <= i; j++) {
-      currProducts = products[j];
-    }
-  }
-};
 module.exports = {
   getProducts,
 };

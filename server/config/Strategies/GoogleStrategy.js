@@ -30,7 +30,7 @@ const GoogleProvider = new GoogleStrategy(
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: process.env.GOOGLE_CALLBACK_URL,
   },
-  async (accessToken, refreshToken, profile, done) => {
+  async (accessToken, refershToken, profile, done) => {
     try {
       const user = await findOrCreateUser(profile);
       return done(null, user);

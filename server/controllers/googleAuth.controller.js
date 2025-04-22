@@ -1,4 +1,4 @@
-const passport = require("../utils/passport");
+const passport = require("../config/passport");
 require("dotenv").config();
 
 /**

@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const passport = require("../utils/passport");
+const passport = require("../config/passport");
 
 const {
   LogoutFromGoogle,

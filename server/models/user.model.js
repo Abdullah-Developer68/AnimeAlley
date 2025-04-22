@@ -7,6 +7,12 @@ const userSchema = new mongoose.Schema(
     // `email` is unique, meaning no two users can have the same email address
     email: { type: String, unique: true, required: true },
 
+    role: {
+      type: String,
+      enum: ["superAdmin", "admin", "customerSupport", "user"],
+      default: "user",
+    },
+
     password: {
       type: String,
       required: function () {
@@ -20,7 +26,14 @@ const userSchema = new mongoose.Schema(
     // `googleId` is unique, ensuring no two users can have the same Google ID
     // `sparse: true` allows users who sign up without Google OAuth to omit this field (it's only enforced for Google users)
     googleId: { type: String, unique: true, sparse: true },
+    orders: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "orders",
+      },
+    ],
   },
+
   { timestamps: true } //Automatically add createdAt & updatedAt
 );
 

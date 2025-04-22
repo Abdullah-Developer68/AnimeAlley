@@ -2,7 +2,7 @@ import assets from "../../assets/asset";
 
 const Footer = () => {
   return (
-    <footer className="bg-gray-800 text-white/90 py-3 sm:py-6 border-t border-red-500">
+    <footer className="bg-black text-white/90 py-3 sm:py-6 border-t border-red-500">
       <div className="container mx-auto px-3">
         <div className="flex flex-col items-center gap-3 sm:gap-0 sm:flex-row sm:justify-between">
           {/* Logo and Title Section - More compact for mobile */}
