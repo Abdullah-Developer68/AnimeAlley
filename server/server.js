@@ -4,16 +4,19 @@ const dotenv = require("dotenv");
 const passport = require("./config/passport"); // Initialize Passport configuration
 
 // Import custom middlewares
-const corsMiddleware = require("./middlewares/corsMiddleware");
-const cookieParserMiddleware = require("./middlewares/cookieParserMiddleware");
 const jsonParserMiddleware = require("./middlewares/jsonParserMiddleware");
 const urlEncodedMiddleware = require("./middlewares/urlEncodedMiddleware");
+const corsMiddleware = require("./middlewares/corsMiddleware");
+const cookieParserMiddleware = require("./middlewares/cookieParserMiddleware");
 const morganMiddleware = require("./middlewares/morganMiddleware");
 const expSession = require("./middlewares/expressSessionMiddleware");
+
 // Import routes
 const authRouter = require("./routes/auth.route");
 const googleAuthRouter = require("./routes/googleAuth.route");
 const productRouter = require("./routes/product.route");
+const CouponRouter = require("./routes/coupon.route");
+const OrderRouter = require("./routes/order.route");
 
 // Used to load environment variables from a .env file into process.env
 dotenv.config();
@@ -49,16 +52,12 @@ dbConnect();
 app.use("/auth", authRouter);
 app.use("/googleAuth", googleAuthRouter);
 app.use("/product", productRouter);
+app.use("/coupon", CouponRouter);
+app.use("/order", OrderRouter);
 
 app.get("/", (req, res) => {
-  res.send("Hello World!");
+  res.send("Backend is running!");
 });
-
-// app.get("/test-session", (req, res) => {
-//   req.session.testValue = req.session.testValue ? req.session.testValue + 1 : 1;
-//   console.log("Session Data:", req.session); // ✅ Log session data
-//   res.send(`Session value: ${req.session.testValue}`);
-// });
 
 app.listen(port, () => {
   console.log(`Server is running at: http://localhost:${port}`);

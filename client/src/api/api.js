@@ -14,11 +14,40 @@ api.googleLogin = () => {
 };
 
 // Changed to POST request for getting products
-api.getProducts = (category, productConstraints, currPage) =>
-  api.post("/product/getProducts", { category, productConstraints, currPage });
+api.getProducts = (category, productConstraints, currPage) => {
+  return api.post("/product/getProducts", {
+    category,
+    productConstraints,
+    currPage,
+  });
+};
 
-api.placeOrder = (data) => {
-  api.post("/order/placeOrder", { data });
+api.placeOrder = (
+  cartItems,
+  couponCode,
+  subtotal,
+  discountedPrice,
+  SHIPPING_COST,
+  finalCost,
+  userInfo,
+  deliveryAddress,
+  paymentMethod
+) => {
+  return api.post("/order/placeOrder", {
+    cartItems,
+    couponCode,
+    subtotal,
+    discountedPrice,
+    SHIPPING_COST,
+    finalCost,
+    userInfo,
+    deliveryAddress,
+    paymentMethod,
+  });
+};
+
+api.verifyCouponCode = (couponCode) => {
+  return api.post("/coupon/verify", { couponCode });
 };
 
 export default api;

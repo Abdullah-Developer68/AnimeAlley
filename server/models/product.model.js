@@ -1,6 +1,10 @@
 const mongoose = require("mongoose");
 
 const productSchema = new mongoose.Schema({
+  productID: {
+    type: String,
+    required: true,
+  },
   name: {
     type: String,
     required: true,
@@ -57,6 +61,10 @@ const productSchema = new mongoose.Schema({
     required: function () {
       return this.category === "toys";
     },
+  },
+
+  sold: {
+    type: Number,
   },
 });
 
