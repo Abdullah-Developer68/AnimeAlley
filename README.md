@@ -44,7 +44,7 @@ A secure, role-based dashboard to manage the entire platform.
   - <img src="https://www.passportjs.org/images/logo.svg" width="24" valign="middle" /> Passport.js (Google OAuth)
   - <img src="https://jwt.io/img/pic_logo.svg" width="24" valign="middle" /> JSON Web Tokens (JWT)
   - 🔒 Bcrypt
-  - <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/stripe/stripe-original-wordmark.svg" width="24" valign="middle" /> Stripe API
+  - <img src="https://raw.githubusercontent.com/devicons/devicon/v2.16.0/icons/stripe/stripe-original-wordmark.svg" width="24" valign="middle" /> Stripe API
   - 📤 Multer
   - 🕒 Node-Cron
 
