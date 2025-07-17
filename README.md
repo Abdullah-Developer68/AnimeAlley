@@ -50,14 +50,50 @@ A secure, role-based dashboard to manage the entire platform.
 
 ## Architecture 🏗️
 
-Built on the **MERN** stack for a unified JavaScript environment.
+The project is a monorepo with a separate `client` and `server` directory.
 
-- **Backend Structure**: Follows an MVC-like pattern for clean code.
+### 📂 Backend Structure (`/server`)
 
-  - `models/`: Mongoose schemas.
-  - `controllers/`: Handles API requests.
-  - `services/`: Core business logic.
-  - `routes/`: API endpoints.
-  - `middlewares/`: CORS, sessions, etc.
+The backend follows an MVC-like pattern to ensure a clean and scalable architecture.
 
-- **Frontend Structure**: A **Single Page Application (SPA)** with a component-based architecture and global state managed by Redux.
+```
+/server
+├── config/           # Configuration files (DB, Passport.js)
+├── controllers/      # Handles request logic, calls services
+├── middlewares/      # Express middleware (auth, error handling)
+├── models/           # Mongoose schemas for DB collections
+├── routes/           # API endpoint definitions
+│   └── modules/      # Routes broken down by feature
+├── services/         # Core business logic (Stripe, export, etc.)
+├── utils/            # Utility functions (email, OTP generation)
+└── server.js         # Main server entry point
+```
+
+### 📂 Frontend Structure (`/client`)
+
+The frontend is a React-based Single Page Application (SPA) built with Vite, featuring a clear, component-based structure.
+
+```
+/client
+├── public/           # Static assets served directly
+└── src/
+    ├── api/          # Centralized Axios instance and API calls
+    ├── assets/       # Images, fonts, and other static assets
+    ├── components/   # Reusable UI components
+    │   ├── Cart/     # Components for the shopping cart page
+    │   ├── Dashboard/# Components for the admin dashboard
+    │   ├── Global/   # App-wide components (Navbar, Footer)
+    │   ├── Home/     # Components for the homepage sections
+    │   ├── Shop/     # Components for the product grid and filters
+    │   └── ProtectedRoute.jsx # HOC for route protection
+    ├── config/       # Application configuration (e.g., API URLs)
+    ├── context/      # React Context providers (e.g., AuthProvider)
+    ├── Hooks/        # Custom React hooks (e.g., useAuth)
+    ├── pages/        # Top-level page components (Home, Login, etc.)
+    ├── redux/        # Redux Toolkit state management
+    │   ├── Slice/    # Individual state slices for features
+    │   └── store.js  # Main Redux store configuration
+    ├── utils/        # Utility functions (e.g., cartId generator)
+    ├── App.jsx       # Root component with routing setup
+    └── main.jsx      # Application entry point
+```
