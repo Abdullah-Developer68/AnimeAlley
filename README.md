@@ -31,20 +31,20 @@ A secure, role-based dashboard to manage the entire platform.
   - <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg" width="24" valign="middle" /> React
   - <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redux/redux-original.svg" width="24" valign="middle" /> Redux Toolkit
   - <img src="https://reactrouter.com/favicon-light.png" width="24" valign="middle" /> React Router
-  - <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/tailwindcss/tailwindcss-plain.svg" width="24" valign="middle" /> Tailwind CSS
+  - <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/tailwindcss/tailwindcss-original.svg" width="24" valign="middle" /> Tailwind CSS
   - <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vitejs/vitejs-original.svg" width="24" valign="middle" /> Vite
   - <img src="https://axios-http.com/assets/logo.svg" width="24" valign="middle" /> Axios
   - <img src="https://react-hook-form.com/images/logo/react-hook-form-logo-only.png" width="24" valign="middle" /> React Hook Form
 
-- **Backend** サーバー
+- **Backend**
   - <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-original.svg" width="24" valign="middle" /> Node.js
   - <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/express/express-original.svg" width="24" valign="middle" /> Express.js
   - <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mongodb/mongodb-original.svg" width="24" valign="middle" /> MongoDB
   - 🦆 Mongoose
   - <img src="https://www.passportjs.org/images/logo.svg" width="24" valign="middle" /> Passport.js (Google OAuth)
-  - <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/jsonwebtokens/jsonwebtokens-original.svg" width="24" valign="middle" /> JSON Web Tokens (JWT)
+  - <img src="https://jwt.io/img/pic_logo.svg" width="24" valign="middle" /> JSON Web Tokens (JWT)
   - 🔒 Bcrypt
-  - <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/stripe/stripe-original.svg" width="24" valign="middle" /> Stripe API
+  - <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/stripe/stripe-original-wordmark.svg" width="24" valign="middle" /> Stripe API
   - 📤 Multer
   - 🕒 Node-Cron
 
