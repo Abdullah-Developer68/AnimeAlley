@@ -50,7 +50,12 @@ A secure, role-based dashboard to manage the entire platform.
 
 ## Architecture 🏗️
 
-The project is a monorepo with a separate `client` and `server` directory.
+This project utilizes a full-stack **Model-View-Controller (MVC)** architecture to create a clear separation between the data, user interface, and control logic.
+
+- **Model & Controller (Backend)**: The Node.js/Express server manages the application's data (Mongoose schemas) and business logic (Express controllers and services). It acts as the **Model** and **Controller**.
+- **View (Frontend)**: The React application is responsible for presenting the data to the user. It serves as the **View**, rendering the UI dynamically based on the state it receives from the backend.
+
+This structure is implemented within a monorepo containing separate `client` and `server` directories.
 
 ### 📂 Backend Structure (`/server`)
 
