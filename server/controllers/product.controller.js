@@ -2,77 +2,389 @@ const productModel = require("../models/product.model");
 
 const getProducts = async (req, res) => {
   try {
-    const { category, productConstraints, currPage } = req.body;
+    // Destructure the productConstraints from the request query
+    const { productConstraints } = req.query;
+    const constraints = JSON.parse(productConstraints);
 
-    if (!category || !currPage) {
+    const { category, productTypes, price, sortBy, page, searchQuery } =
+      constraints;
+
+    if (!category || !page) {
       return res.status(400).json({
         success: false,
-        message: "Category and currPage is required",
+        message: "Category and page is required",
       });
     }
 
     // Build the query object
-    const query = { category };
+    const query = { category: category.toLowerCase() };
 
-    // Add price filter if productConstraints has price
-    if (productConstraints?.price) {
-      query.price = { $gte: productConstraints.price };
+    // Add text search if searchQuery exists and is not empty
+    if (searchQuery && searchQuery.trim() !== "") {
+      query.$text = { $search: searchQuery.trim() };
     }
 
-    // Add filter of the respective category, if productConstraints has activeFilters
-    if (productConstraints?.activeFilters?.length > 0) {
-      console.log("Active Filters:", productConstraints.activeFilters);
-      console.log("Category:", category);
+    // Add price filter if price exists
+    if (price) {
+      query.price = { $gte: price };
+    }
 
+    // Add filter to the query of the respective category
+    if (
+      productTypes &&
+      productTypes.length > 0 &&
+      !productTypes.includes("all")
+    ) {
       if (category === "comics") {
-        query.genre = { $in: productConstraints.activeFilters };
-        console.log("Comics Query:", query);
+        query.genres = { $in: productTypes };
       } else if (category === "clothes" || category === "shoes") {
-        query.merchType = { $in: productConstraints.activeFilters };
-        console.log("Clothes/Shoes Query:", query);
+        query.merchType = { $in: productTypes };
       } else if (category === "toys") {
-        query.toyType = { $in: productConstraints.activeFilters };
-        console.log("Toys Query:", query);
+        query.toyType = { $in: productTypes };
       }
     }
 
-    // Get products with the filters
-    let products = await productModel.find(query);
-    console.log("Found Products:", products.length);
-
-    // Sort products if sortBy is specified
-    if (productConstraints?.sortBy) {
-      switch (productConstraints.sortBy) {
+    // Define sorting options
+    const sortOptions = {};
+    if (sortBy) {
+      switch (sortBy) {
         case "popular":
-          // You might want to add a popularity field to your schema
-          // For now, we'll sort by price in descending order
-          products.sort((a, b) => b.price - a.price);
+        case "price-high":
+          sortOptions.price = -1; // Sort by price descending
           break;
         case "price-low":
-          products.sort((a, b) => a.price - b.price); // ascending order
-          break;
-        case "price-high":
-          products.sort((a, b) => b.price - a.price); // desending order
+          sortOptions.price = 1; // Sort by price ascending
           break;
         default:
           break;
       }
     }
 
-    // Get products for current page using slice
     const itemsPerPage = 20;
-    const startIndex = (currPage - 1) * itemsPerPage; // Assuming currPage starts from 1
-    const endIndex = startIndex + 20;
-    const currPageProducts = products.slice(startIndex, endIndex);
-    const totalPages = Math.ceil(products.length / 20); // Calculate total pages
+    const startIndex = (page - 1) * itemsPerPage;
 
-    res.status(200).json({ success: true, currPageProducts, totalPages });
+    // Get the total count of products matching the query
+    const totalProducts = await productModel.countDocuments(query);
+
+    // Get paginated products with the filters and sorting
+    const currPageProducts = await productModel
+      .find(query)
+      .sort(sortOptions)
+      .skip(startIndex)
+      .limit(itemsPerPage);
+
+    const totalPages = Math.ceil(totalProducts / itemsPerPage);
+
+    res
+      .status(200)
+      .json({ success: true, currPageProducts, totalPages, totalProducts });
   } catch (error) {
     console.error("Error while fetching products:", error.message);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
   }
+};
+
+const findProducts = async (req, res) => {
+  const { searchQuery } = req.query;
+
+  if (!searchQuery) {
+    return res.status(400).json({ message: "bad request" });
+  }
+
+  //based on name
+  const products = await productModel.find({
+    $text: { $search: searchQuery },
+  });
+
+  if (!products) {
+    return res.status(500).json({ message: "error searching for products!" });
+  }
+
+  if (products.length === 0) {
+    return res.status(404).json({ message: "No products were found!" });
+  }
+
+  res.status(200).json({ products, message: "products have been sent!" });
+};
+
+const createProduct = async (req, res) => {
+  try {
+    let imageFilename;
+    if (req.file) {
+      imageFilename = req.file.filename;
+    } else if (req.body.image) {
+      imageFilename = req.body.image;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Product image is required",
+      });
+    }
+    if (
+      !req.body.productID ||
+      !req.body.name ||
+      !req.body.price ||
+      !req.body.stock ||
+      !req.body.category
+    ) {
+      console.error("Missing required fields:", req.body);
+      return res.status(400).json({
+        success: false,
+        message: "fields in data from client are missing",
+      });
+    }
+    const productData = {
+      productID: req.body.productID,
+      name: req.body.name,
+      price: parseFloat(req.body.price),
+      category: req.body.category,
+      description: req.body.description,
+      image: imageFilename,
+      stock: JSON.parse(req.body.stock),
+    };
+
+    // Add category-specific fields
+    if (req.body.category === "comics") {
+      const volumes = JSON.parse(req.body.volumes);
+      const genres = JSON.parse(req.body.genres);
+
+      productData.volumes = volumes;
+      productData.genres = genres;
+
+      // Validate that stock exists for each volume
+      volumes.forEach((volume) => {
+        if (typeof productData.stock[volume] === "undefined") {
+          throw new Error(`Stock value missing for volume ${volume}`);
+        }
+      });
+    } else if (
+      req.body.category === "clothes" ||
+      req.body.category === "shoes"
+    ) {
+      const sizes = JSON.parse(req.body.sizes);
+      productData.sizes = sizes;
+      productData.merchType = req.body.merchType;
+
+      // Validate that stock exists for each size
+      sizes.forEach((size) => {
+        if (typeof productData.stock[size] === "undefined") {
+          throw new Error(`Stock value missing for size ${size}`);
+        }
+      });
+    } else if (req.body.category === "toys") {
+      productData.toyType = req.body.toyType;
+
+      // For toys, stock should be a number
+      if (typeof productData.stock !== "number") {
+        throw new Error("Invalid stock value for toy");
+      }
+    }
+
+    console.log("Creating product with data:", productData);
+
+    const newProduct = await productModel.create(productData);
+
+    res.status(201).json({
+      success: true,
+      message: "Product created successfully",
+      product: newProduct,
+    });
+  } catch (error) {
+    console.error("Error creating product:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+const updateProduct = async (req, res) => {
+  try {
+    let imageFilename;
+    if (req.file) {
+      imageFilename = req.file.filename;
+    } else if (req.body.image) {
+      imageFilename = req.body.image;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Product image is required",
+      });
+    }
+    if (
+      !req.body.productID ||
+      !req.body.name ||
+      !req.body.price ||
+      !req.body.stock ||
+      !req.body.category
+    ) {
+      console.error("Missing required fields:", req.body);
+      return res.status(400).json({
+        success: false,
+        message: "fields in data from client are missing",
+      });
+    }
+    const productData = {
+      productID: req.body.productID,
+      name: req.body.name,
+      price: parseFloat(req.body.price),
+      category: req.body.category,
+      description: req.body.description,
+      image: imageFilename,
+      stock: JSON.parse(req.body.stock),
+    };
+
+    // Add category-specific fields
+    if (req.body.category === "comics") {
+      const volumes = JSON.parse(req.body.volumes);
+      const genres = JSON.parse(req.body.genres);
+
+      productData.volumes = volumes;
+      productData.genres = genres;
+
+      // Validate that stock exists for each volume
+      volumes.forEach((volume) => {
+        if (typeof productData.stock[volume] === "undefined") {
+          throw new Error(`Stock value missing for volume ${volume}`);
+        }
+      });
+    } else if (
+      req.body.category === "clothes" ||
+      req.body.category === "shoes"
+    ) {
+      const sizes = JSON.parse(req.body.sizes);
+      productData.sizes = sizes;
+      productData.merchType = req.body.merchType;
+
+      // Validate that stock exists for each size
+      sizes.forEach((size) => {
+        if (typeof productData.stock[size] === "undefined") {
+          throw new Error(`Stock value missing for size ${size}`);
+        }
+      });
+    } else if (req.body.category === "toys") {
+      productData.toyType = req.body.toyType;
+
+      // For toys, stock should be a number
+      if (typeof productData.stock !== "number") {
+        throw new Error("Invalid stock value for toy");
+      }
+    }
+
+    console.log("Creating product with data:", productData);
+
+    const updatedProduct = await productModel.findOneAndUpdate(
+      { productID: productData.productID },
+      productData,
+      { new: true }
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Product created successfully",
+      product: updatedProduct,
+    });
+  } catch (error) {
+    console.error("Error creating product:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+const verifyStock = async (req, res) => {
+  try {
+    const { itemName, selectedVariant, itemQuantity } = req.query;
+
+    if (!itemName || !selectedVariant || !itemQuantity) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required parameters",
+      });
+    }
+
+    const product = await productModel.findOne({ name: itemName });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    // Check if the variant exists in the product
+    let stockAvailable = 0;
+    if (product.category === "comics") {
+      if (!product.volumes?.includes(selectedVariant)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid volume selected",
+        });
+      }
+      stockAvailable = product.stock[selectedVariant] || 0;
+    } else if (product.category === "clothes" || product.category === "shoes") {
+      // Changed from size to sizes
+      if (!product.sizes?.includes(selectedVariant)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid size selected",
+        });
+      }
+      stockAvailable = product.stock[selectedVariant] || 0;
+    } else {
+      // For toys and other categories with simple stock
+      stockAvailable = product.stock;
+    }
+
+    return res.status(200).json({
+      success: true,
+      stockAvailable,
+      isAvailable: stockAvailable >= parseInt(itemQuantity),
+      message:
+        stockAvailable >= parseInt(itemQuantity)
+          ? "Stock available"
+          : `Only ${stockAvailable} items available`,
+    });
+  } catch (error) {
+    console.error("Error verifying stock:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+const deleteProduct = async (req, res) => {
+  console.log("Delete product request received:", req.body);
+  const { productID } = req.body;
+
+  if (!productID) {
+    return res.status(400).json({ message: "The productID is required!" });
+  }
+
+  const result = await productModel.deleteOne({ productID });
+
+  if (!result.acknowledged) {
+    return res
+      .status(500)
+      .json({ message: "Error occured while deleting the document!" });
+  }
+  res.status(200).json({
+    message: `Product with ID: ${productID} has been deleted!`,
+    success: true,
+  });
 };
 
 module.exports = {
   getProducts,
+  createProduct,
+  findProducts,
+  verifyStock,
+  deleteProduct,
+  updateProduct,
 };

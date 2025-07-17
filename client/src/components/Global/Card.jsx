@@ -2,6 +2,7 @@ import assets from "../../assets/asset";
 import { useDispatch } from "react-redux";
 import { transferProductData } from "../../redux/Slice/shopSlice";
 import { Link } from "react-router-dom";
+import config from "../../config/config";
 
 /* eslint-disable react/prop-types */
 const Cards = ({ product }) => {
@@ -10,6 +11,10 @@ const Cards = ({ product }) => {
     console.log("Sending product data to Redux store:", product);
     dispatch(transferProductData(product));
   };
+
+  // Construct the complete image URL using config
+  const imageUrl = `${config.apiBaseUrl}${config.uploadsPath}/${product.image}`;
+
   return (
     <div
       key={product._id}
@@ -18,7 +23,7 @@ const Cards = ({ product }) => {
       {/* Product Image */}
       <div className="aspect-[3/4] overflow-hidden">
         <img
-          src={product.image}
+          src={imageUrl}
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
@@ -31,12 +36,6 @@ const Cards = ({ product }) => {
           <h3 className="text-white/90 font-medium text-sm truncate max-w-[120px]">
             {product.name}
           </h3>
-          <div className="flex items-center bg-white/10 px-1 py-0.5 rounded-full">
-            <span className="text-yellow-400 text-xs">★</span>
-            <span className="text-white/70 text-xs ml-0.5">
-              {product.rating}
-            </span>
-          </div>
         </div>
 
         {/* Category */}

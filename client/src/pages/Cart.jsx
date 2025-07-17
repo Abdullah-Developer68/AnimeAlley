@@ -1,107 +1,187 @@
 import { Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { increaseQuantity, decreaseQuantity } from "../redux/Slice/cartSlice";
+import {
+  increaseQuantity,
+  emptyCart,
+  applyCoupon,
+  resetCoupon,
+  setFinalCost,
+} from "../redux/Slice/cartSlice";
+import {
+  decrementReservationStockAsync,
+  incrementReservationStockAsync,
+} from "../redux/Slice/cartThunks";
+import { getOrCreateCartId } from "../utils/cartId";
+import StripeButton from "../components/Cart/StripeButton";
 import { useState, useEffect } from "react";
 import api from "../api/api";
+import { toast } from "react-toastify";
+import config from "../config/config";
 
 const Cart = () => {
   // Redux setup
   const dispatch = useDispatch();
   const cartItems = useSelector((state) => state.cart.cartItems);
+  const couponApplied = useSelector((state) => state.cart.couponApplied);
+  const couponCode = useSelector((state) => state.cart.couponCode);
+  const finalCost = useSelector((state) => state.cart.finalCost);
 
   // Constants
   const SHIPPING_COST = 99;
 
   // State management
-  const [couponCode, setCouponCode] = useState("");
-  const [finalCost, setFinalCost] = useState(
-    localStorage.getItem("finalCost") || 0
+  const [deliveryAddress, setDeliveryAddress] = useState(
+    localStorage.getItem("deliveryAddress")
+      ? localStorage.getItem("deliveryAddress")
+      : ""
   );
-  const [couponApplied, setCouponApplied] = useState(
-    localStorage.getItem("couponApplied") || false
-  );
-  const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("cod"); // Default to Cash on Delivery
+  const [paymentMethod, setPaymentMethod] = useState(""); // Default to Cash on Delivery
+  const [couponInput, setCouponInput] = useState(""); // Local state for coupon input
+  const [couponDiscount, setCouponDiscount] = useState(0); // Store coupon discount percentage
+  const [originalPrice, setOriginalPrice] = useState(0); // Store original price before discount
 
   // Price calculations
   const calculateSubtotal = () => {
-    return cartItems.reduce(
-      (total, item) => total + item.price * item.itemQuantity,
-      0
+    return Math.round(
+      cartItems.reduce(
+        (total, item) => total + item.price * item.itemQuantity,
+        0
+      )
     );
   };
 
   const subtotal = calculateSubtotal();
-  const originalCost = subtotal + SHIPPING_COST;
-  let discountedPrice;
 
-  // Update final cost when cart changes
+  // Update final cost when cart or coupon changes
   useEffect(() => {
-    setFinalCost(originalCost);
-  }, [originalCost]);
+    if (cartItems.length === 0) {
+      dispatch(resetCoupon());
+      setCouponDiscount(0);
+      setOriginalPrice(0);
+      return;
+    }
+
+    const totalBeforeDiscount = subtotal + SHIPPING_COST;
+    setOriginalPrice(totalBeforeDiscount);
+
+    if (!couponApplied || couponDiscount === 0) {
+      // No coupon: final cost is subtotal + shipping
+      dispatch(resetCoupon());
+      dispatch(setFinalCost(totalBeforeDiscount));
+    } else {
+      // Coupon applied: use stored discount percentage
+      const discountedPrice = Math.round(subtotal * (1 - couponDiscount / 100));
+      const newFinalCost = Math.round(discountedPrice + SHIPPING_COST);
+      dispatch(
+        applyCoupon({
+          couponCode: couponCode,
+          discountedPrice,
+          finalCost: newFinalCost,
+        })
+      );
+    }
+  }, [
+    cartItems,
+    subtotal,
+    SHIPPING_COST,
+    couponApplied,
+    couponDiscount,
+    couponCode,
+    dispatch,
+  ]);
+
+  // Update localStorage when delivery address changes
+  useEffect(() => {
+    localStorage.setItem("deliveryAddress", deliveryAddress);
+  }, [deliveryAddress]);
 
   // Coupon handling
   const handleCouponCode = async () => {
     if (couponApplied) {
-      alert("Coupon already applied!");
+      toast.error("Coupon has been used!");
       return;
     }
 
-    if (!couponCode) {
-      alert("Please enter a coupon code");
+    if (!couponInput) {
+      toast.error("If you have a coupon code, please enter it.");
       return;
     }
 
     try {
-      const response = await api.verifyCouponCode(couponCode.trim());
-      const coupon = response.data?.coupon;
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      if (!userInfo) {
+        toast.error("Please login to apply coupon");
+        return;
+      }
+
+      const response = await api.verifyCouponCode(
+        couponInput.trim(),
+        userInfo.email
+      );
+
+      if (response.success === false) {
+        toast.error("Invalid coupon code");
+        return;
+      }
+
+      const coupon = response.data?.coupondata.coupon;
 
       if (coupon) {
         const discount = coupon.discountPercentage;
-        discountedPrice = subtotal - (subtotal * discount) / 100;
-        const newFinalCost = discountedPrice + SHIPPING_COST;
+        setCouponDiscount(discount); // Store discount percentage in state
+        const discountedPrice = Math.round(subtotal * (1 - discount / 100));
+        const newFinalCost = Math.round(discountedPrice + SHIPPING_COST);
 
-        // Update state and localStorage
-        setFinalCost(newFinalCost);
-        setCouponApplied(true);
-        localStorage.setItem("finalCost", newFinalCost);
-        localStorage.setItem("couponApplied", true);
+        dispatch(
+          applyCoupon({
+            couponCode: couponInput.trim(),
+            discountedPrice,
+            finalCost: newFinalCost,
+          })
+        );
 
         setTimeout(() => {
-          alert(`Coupon applied! New total: Rs. ${newFinalCost}`);
+          toast.success(`Coupon applied! New total: ${newFinalCost} $`);
         }, 500);
       } else {
-        alert("Invalid coupon code");
+        toast.error("Invalid coupon code");
       }
     } catch (error) {
-      console.error("Error verifying coupon:", error);
-      alert("Something went wrong while verifying the coupon.");
+      toast.error(error.response?.data?.message || "Error applying coupon");
     }
   };
 
   // Order placement
   const handlePlaceOrder = () => {
     if (!deliveryAddress.trim()) {
-      alert("Please enter a delivery address");
+      toast.error("Please enter a delivery address");
       return;
     }
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      api.placeOrder(
+        cartItems,
+        couponCode,
+        subtotal,
+        finalCost,
+        SHIPPING_COST,
+        finalCost,
+        userInfo,
+        deliveryAddress,
+        paymentMethod,
+        getOrCreateCartId() // <-- returns an existing cartId otherwise creates a new one.
+      );
 
-    const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-    api.placeOrder(
-      cartItems,
-      couponCode,
-      subtotal,
-      discountedPrice,
-      SHIPPING_COST,
-      finalCost,
-      userInfo,
-      deliveryAddress,
-      paymentMethod
-    );
-    localStorage.setItem("couponApplied", false);
-    localStorage.setItem("finalCost", 0);
-    localStorage.setItem("cartItems", JSON.stringify([]));
-    alert("Order placed successfully!");
+      // Reset states
+      dispatch(emptyCart());
+      dispatch(resetCoupon());
+      setPaymentMethod("cod");
+
+      toast.success("Order placed successfully!");
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || "Something went wrong");
+    }
   };
 
   // Helper function to render variant badge
@@ -120,23 +200,66 @@ const Cart = () => {
     );
   };
 
+  //verify Stock
+  const checkStock = async (item) => {
+    try {
+      // Always check if 1 more can be added, not the total
+      const res = await api.verifyStock(item.name, item.selectedVariant, 1);
+      if (res.data.success) {
+        if (!res.data.isAvailable) {
+          toast.error(res.data.message);
+          // Update the item quantity to maximum available
+          dispatch(
+            increaseQuantity({
+              id: item._id,
+              selectedVariant: item.selectedVariant,
+              newQuantity: res.data.stockAvailable,
+            })
+          );
+          return false;
+        }
+        return true;
+      }
+    } catch (error) {
+      console.error("Error checking stock:", error);
+      return false;
+    }
+  };
+
   // Quantity handlers
-  const handleIncreaseQuantity = (item) => {
-    dispatch(
-      increaseQuantity({
-        id: item._id,
-        selectedVariant: item.selectedVariant,
-      })
-    );
+  const handleIncreaseQuantity = async (item) => {
+    const canIncrease = await checkStock(item);
+    if (canIncrease) {
+      // dispatch(
+      //   increaseQuantity({
+      //     id: item._id,
+      //     selectedVariant: item.selectedVariant,
+      //   })
+      // );
+      dispatch(
+        incrementReservationStockAsync({
+          id: item._id,
+          variant: item.selectedVariant,
+        })
+      )
+        .unwrap()
+        .catch((err) => {
+          toast.error(err);
+        });
+    }
   };
 
   const handleDecreaseQuantity = (item) => {
     dispatch(
-      decreaseQuantity({
+      decrementReservationStockAsync({
         id: item._id,
-        selectedVariant: item.selectedVariant,
+        variant: item.selectedVariant,
       })
-    );
+    )
+      .unwrap()
+      .catch((err) => {
+        toast.error(err);
+      });
   };
 
   // Render Component
@@ -174,7 +297,7 @@ const Cart = () => {
                     {/* Image Section */}
                     <div className="shrink-0 mx-auto sm:mx-0">
                       <img
-                        src={item.image}
+                        src={`${config.apiBaseUrl}${config.uploadsPath}/${item.image}`}
                         alt={item.name}
                         className="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-lg shadow-lg hover:scale-105 transition-transform duration-300"
                       />
@@ -188,7 +311,9 @@ const Cart = () => {
                             {item.name}
                           </h3>
                           <p className="text-base sm:text-lg font-bold text-white text-center sm:text-right">
-                            Rs. {item.price * item.itemQuantity}
+                            <span className="text-black p-1 rounded-md font-bold text-xs bg-yellow-500">
+                              {item.price * item.itemQuantity} $
+                            </span>
                           </p>
                         </div>
 
@@ -233,16 +358,24 @@ const Cart = () => {
             <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
               <div className="flex justify-between text-white/70">
                 <span>Items ({cartItems.length})</span>
-                <span>Rs. {subtotal}</span>
+                <span>{subtotal} $</span>
               </div>
               <div className="flex justify-between text-white/70">
                 <span>Shipping</span>
-                <span>Rs. {SHIPPING_COST}</span>
+                <span>{SHIPPING_COST} $</span>
               </div>
               <div className="border-t border-white/10 pt-4">
-                <div className="flex justify-between text-yellow-500 font-bold">
-                  <span>Total</span>
-                  <span>Rs. {finalCost}</span>
+                <div className="flex flex-col items-end">
+                  {couponApplied && (
+                    <div className="flex justify-between w-full text-white/50 text-sm">
+                      <span>Original Total</span>
+                      <span className="line-through">{originalPrice} $</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between w-full text-yellow-500 font-bold">
+                    <span>Total</span>
+                    <span>{finalCost} $</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -253,8 +386,8 @@ const Cart = () => {
               <input
                 type="text"
                 placeholder="Coupon Code"
-                value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value)}
+                value={couponInput}
+                onChange={(e) => setCouponInput(e.target.value)}
                 className="w-full px-3 sm:px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/50 focus:border-pink-500/50 outline-none transition-colors text-sm sm:text-base"
               />
               <button
@@ -280,8 +413,10 @@ const Cart = () => {
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
-                    onClick={() => setPaymentMethod("cod")}
-                    className={`px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer
+                    onClick={() =>
+                      setPaymentMethod((prev) => (prev === "cod" ? "" : "cod"))
+                    }
+                    className={`px-2 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer
                       ${
                         paymentMethod === "cod"
                           ? "bg-yellow-500 text-black"
@@ -290,27 +425,19 @@ const Cart = () => {
                   >
                     Cash on Delivery
                   </button>
-                  <button
-                    onClick={() => setPaymentMethod("online")}
-                    className={`px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all duration-300 flex items-center justify-center gap-Î cursor-pointer
-                      ${
-                        paymentMethod === "online"
-                          ? "bg-yellow-500 text-black"
-                          : "bg-white/10 text-white/70 hover:bg-white/20"
-                      }`}
-                  >
-                    Pay Online
-                  </button>
+                  <StripeButton />
                 </div>
               </div>
 
               {/* Checkout Button */}
-              <button
-                className="w-full py-3 rounded-lg bg-pink-500 text-black cursor-pointer font-medium hover:shadow-lg hover:shadow-pink-500/25 transition-all duration-300 text-sm sm:text-base mt-4"
-                onClick={handlePlaceOrder}
-              >
-                {paymentMethod === "cod" ? "Place Order" : "Proceed to Payment"}
-              </button>
+              {paymentMethod === "cod" && (
+                <button
+                  className="w-full py-3 rounded-lg bg-pink-500 text-black cursor-pointer font-medium hover:shadow-lg hover:shadow-pink-500/25 transition-all duration-300 text-sm sm:text-base mt-4"
+                  onClick={handlePlaceOrder}
+                >
+                  Place Order
+                </button>
+              )}
             </div>
           </div>
         </div>

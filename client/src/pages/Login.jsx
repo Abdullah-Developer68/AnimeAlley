@@ -2,6 +2,7 @@ import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import useAuth from "../Hooks/UseAuth";
 import api from "../api/api";
+import { toast } from "react-toastify";
 
 const Login = () => {
   // using cutom hook for auth
@@ -16,17 +17,22 @@ const Login = () => {
   } = useForm();
 
   const localLogin = async (data) => {
-    // Login logic will be implemented later
     console.log(data);
+    try {
+      const res = await api.post("/auth/login", data);
 
-    const res = await api.post("/auth/login", data);
-
-    if (res.data.success) {
-      setUser(res.data.user);
-      localStorage.setItem("userInfo", JSON.stringify(res.data.user));
-      navigate("/");
-    } else {
-      alert("Something went wrong!");
+      if (res.data.success) {
+        localStorage.clear();
+        setUser(res.data.user);
+        localStorage.setItem("userInfo", JSON.stringify(res.data.user));
+        navigate("/");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "An error occurred!");
+      console.error("Login error:", {
+        message: error.response?.data?.message,
+        status: error.response?.status,
+      });
     }
   };
 
@@ -36,7 +42,7 @@ const Login = () => {
 
   return (
     <>
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#0b0133] to-[#1a0266] px-4 py-6">
+      <div className="min-h-screen flex items-center justify-center px-4 py-6">
         <div className="w-full max-w-md p-4 sm:p-8 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 shadow-xl">
           {/* Header */}
           <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-center text-white/90">
@@ -94,7 +100,7 @@ const Login = () => {
             {/* Login Button */}
             <button
               type="submit"
-              className="w-full py-2.5 sm:py-3 rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm sm:text-base font-medium hover:shadow-lg hover:shadow-pink-500/25 transition-all duration-300"
+              className="w-full py-2.5 sm:py-3 rounded-lg bg-pink-500 text-black text-sm sm:text-base font-medium hover:shadow-lg hover:shadow-pink-500/25 transition-all duration-300 cursor-pointer"
             >
               Login
             </button>

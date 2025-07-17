@@ -9,10 +9,20 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Navbar from "./components/Global/Navbar";
 import Footer from "./components/Global/Footer";
 import Dashboard from "./pages/Dashboard";
+import Success from "./pages/Success";
 import { Routes, Route } from "react-router-dom";
+import "react-toastify/dist/ReactToastify.css";
 import "./App.css";
+import { useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { checkAndExpireCart } from "./redux/Slice/cartSlice";
 
 function App() {
+  const dispatch = useDispatch();
+  useEffect(() => {
+    dispatch(checkAndExpireCart());
+  }, [dispatch]);
+
   return (
     <>
       <div className="min-h-screen flex flex-col">
@@ -30,22 +40,8 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/shop"
-              element={
-                <ProtectedRoute>
-                  <Shop />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/shop/:id"
-              element={
-                <ProtectedRoute>
-                  <ProductDes />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/shop" element={<Shop />} />
+            <Route path="/shop/:id" element={<ProductDes />} />
             <Route
               path="/history"
               element={
@@ -63,6 +59,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/success" element={<Success />} />
           </Routes>
         </main>
         <Footer />

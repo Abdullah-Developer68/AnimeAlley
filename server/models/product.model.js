@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { Schema } = mongoose;
 
 const productSchema = new mongoose.Schema({
   productID: {
@@ -17,10 +18,6 @@ const productSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
-  stock: {
-    type: Number,
-    required: true,
-  },
   image: {
     type: String,
     required: true,
@@ -29,54 +26,78 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  genre: {
+  genres: {
     type: [String],
     required: function () {
       return this.category === "comics";
     },
   },
   //variants section in productDes.jx
-  size: {
+  sizes: {
     type: [String],
     required: function () {
       return this.category === "clothes" || this.category === "shoes";
     },
   },
-  volume: {
+  volumes: {
     type: [String],
-
     required: function () {
       return this.category === "comics";
     },
   },
+  stock: {
+    type: Schema.Types.Mixed, // allows mongodb to accept multiple data types
+    required: true,
+    validate: {
+      validator: function (value) {
+        if (this.category === "comics") {
+          const isObject = typeof value === "object";
+          const hasValidVolumes = Object.keys(value).every(
+            (key) => this.volumes.includes(key) && Number.isInteger(value[key])
+          );
+          return isObject && hasValidVolumes;
+        } else if (this.category === "clothes" || this.category === "shoes") {
+          const isObject = typeof value === "object";
+          const isValidSizes = Object.keys(value).every(
+            (key) => this.sizes.includes(key) && Number.isInteger(value[key])
+          );
+          return isObject && isValidSizes;
+        } else {
+          return typeof value === "number" && Number.isInteger(value);
+        }
+      },
+      message: "Invalid stock format for this category",
+    },
+  },
   //for filter bar
   merchType: {
-    type: [String],
+    type: String,
     required: function () {
       return this.category === "clothes" || this.category === "shoes";
     },
   },
   toyType: {
-    type: [String],
+    type: String,
     required: function () {
       return this.category === "toys";
     },
   },
 
-  sold: {
-    type: Number,
+  // sold: {
+  //   type: Number,
+  // },
+});
+
+// Add text index on searchable fields
+productSchema.index(
+  {
+    name: "text",
+    category: "text",
   },
-});
-
-// A virtual field is a property that doesn’t get saved in the MongoDB database — it is calculated dynamically
-//  when you access the document in your code
-productSchema.virtual("totalPrice").get(function () {
-  return this.price * this.quantity;
-});
-
-// By default, virtual fields are not included when you convert your Mongoose document to JSON
-// or a plain JS object. so this tells mongoose to do it
-productSchema.set("toJSON", { virtuals: true });
-productSchema.set("toObject", { virtuals: true });
+  {
+    weights: { name: 5, category: 4 },
+    name: "ProductSearchIndex",
+  }
+);
 
 module.exports = mongoose.model("products", productSchema);

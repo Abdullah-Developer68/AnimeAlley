@@ -4,7 +4,7 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
   currCategory: localStorage.getItem("currCategory") || "comics",
   openFilterBar: JSON.parse(localStorage.getItem("openFilterBar")) || false,
-  activeFilters: JSON.parse(localStorage.getItem("activeFilters")) || {},
+  productTypes: JSON.parse(localStorage.getItem("productTypes")) || {},
   currPage: parseInt(localStorage.getItem("currPage")) || 1,
   totalPages: parseInt(localStorage.getItem("totalPages")) || 1,
   productData: JSON.parse(localStorage.getItem("productData")) || {},
@@ -26,8 +26,8 @@ export const shopSlice = createSlice({
       localStorage.setItem("openFilterBar", JSON.stringify(action.payload));
     },
     transferFilterData: (state, action) => {
-      state.activeFilters = action.payload;
-      localStorage.setItem("activeFilters", JSON.stringify(action.payload));
+      state.productTypes = action.payload;
+      localStorage.setItem("productTypes", JSON.stringify(action.payload));
     },
     updateCurrPage: (state, action) => {
       state.currPage = action.payload;
@@ -45,7 +45,7 @@ export const shopSlice = createSlice({
 });
 
 // Action creators are generated for each case reducer function by redux toolkit
-// Action creators are functions that create actions. They simply return an action object.
+// Action creators are functions that create actions. They simply return an action object (contains type and payload).
 export const {
   setCategory,
   openFilterBar,

@@ -41,16 +41,32 @@ const CardSlider = () => {
     ],
   };
 
+  const comics = [
+    { img: assets.dragonBallComic, label: "Dragon Ball Z" },
+    {
+      img: assets.narutoComic,
+      label: "Naruto",
+    },
+    {
+      img: assets.pokemonComic,
+      label: "Pokemon",
+    },
+    {
+      img: assets.saoComic,
+      label: "SAO",
+    },
+  ];
+
   return (
     <div className="z-40 w-full max-w-6xl mx-auto max-[610px]:px-64 max-[830px]:px-32">
       <div className="[&_.slick-prev]:left-2 [&_.slick-next]:right-2 [&_.slick-prev]:z-10 [&_.slick-next]:z-10 [&_.slick-prev:before]:text-2xl [&_.slick-next:before]:text-2xl">
         <Slider {...settings}>
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((index) => (
+          {comics.map((comic, index) => (
             <div key={index} className="px-2">
-              <div className="group relative w-full max-w-[300px] mx-auto bg-black/60 backdrop-blur-sm border border-orange-500/40 rounded-lg shadow-lg overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-orange-500/20 hover:border-orange-500/60">
+              <div className="group relative w-full max-w-[300px] mx-auto bg-black/60 backdrop-blur-sm border border-orange-500/40 rounded-lg shadow-lg overflow-hidden transition-all duration-300 hover:scale-100 hover:shadow-orange-500/20 hover:border-orange-500/60">
                 <div className="w-full aspect-[3/4] overflow-hidden">
                   <img
-                    src={assets.sao}
+                    src={comic.img}
                     alt={`Slide ${index}`}
                     className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-110"
                   />
@@ -58,7 +74,7 @@ const CardSlider = () => {
 
                 <div className="absolute bottom-0 inset-x-0 p-2 text-center bg-gradient-to-t from-black/90 via-black/60 to-transparent">
                   <h3 className="text-xs sm:text-sm font-medium text-red-400 tracking-wide">
-                    Comic {index}
+                    {comic.label}
                   </h3>
                 </div>
 

@@ -1,4 +1,5 @@
 import { createContext, useEffect, useState } from "react";
+import PropTypes from "prop-types";
 import api from "../api/api";
 
 const AuthContext = createContext();
@@ -13,27 +14,32 @@ const AuthProvider = ({ children }) => {
 
   const checkAuthStatus = async () => {
     try {
-      // First try Google auth
-      const res = await api.get("/googleAuth/success");
-
+      // First try verifying JWT token works for both normal and Google auth
+      const res = await api.get("/auth/verify");
       if (res.data.success) {
         setUser(res.data.user);
         localStorage.setItem("userInfo", JSON.stringify(res.data.user));
         return;
-      } else {
-        setUser(null);
-        localStorage.removeItem("userInfo");
       }
+
+      // If JWT verification fails, try Google auth
+      const googleRes = await api.get("/googleAuth/success");
+      console.log("Google login response:", googleRes.data);
+      if (googleRes.data.success) {
+        setUser(googleRes.data.user);
+        localStorage.setItem("userInfo", JSON.stringify(googleRes.data.user));
+        return;
+      }
+
+      setUser(null);
     } catch (error) {
       console.error("Auth check error:", error);
       setUser(null);
-      localStorage.removeItem("userInfo");
     } finally {
       setLoading(false);
     }
   };
-
-  // Add updateUser function for manual auth
+  // update the user when it changes for manual auth
   const updateUser = (userData) => {
     setUser(userData);
     if (userData) {
@@ -52,6 +58,14 @@ const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
+};
+
+// prop validation
+AuthProvider.propTypes = {
+  children: PropTypes.oneOfType([
+    PropTypes.arrayOf(PropTypes.node),
+    PropTypes.node,
+  ]).isRequired,
 };
 
 export { AuthProvider, AuthContext };

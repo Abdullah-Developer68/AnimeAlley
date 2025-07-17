@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { addToCart } from "../redux/Slice/cartSlice";
+// import { addToCart } from "../redux/Slice/cartSlice";
+import { addToCartAsync } from "../redux/Slice/cartThunks";
 import { Link } from "react-router-dom";
+import api from "../api/api";
 import assets from "../assets/asset";
+import config from "../config/config";
+import { toast } from "react-toastify";
 
 const ProductDescription = () => {
   const dispatch = useDispatch();
@@ -12,30 +16,59 @@ const ProductDescription = () => {
 
   // States for managing product variants and selections
   const [variantOptions, setVariantOptions] = useState([]);
-  const [variantTitle, setVariantTitle] = useState("");
+  const [variantLabel, setVariantLabel] = useState("");
   const [selectedVariant, setSelectedVariant] = useState("");
   const [itemQuantity, setItemQuantity] = useState(1);
+  const [stockStatus, setStockStatus] = useState({});
 
-  // Calculate total price based on quantity
-  const totalPrice = selectedProduct.price * itemQuantity;
+  const totalPrice = itemQuantity * selectedProduct.price;
 
   // Set up variant options based on product category
   useEffect(() => {
     if (selectedProduct.category === "comics") {
-      setVariantOptions(selectedProduct.volume || []);
-      setVariantTitle("Select the volume:");
+      setVariantOptions(selectedProduct.volumes || []);
+      setVariantLabel("Select the volume:");
+      // Initialize stock status for all volumes
+      const initialStockStatus = {};
+      selectedProduct.volumes?.forEach((volume) => {
+        initialStockStatus[volume] = {
+          stockAvailable: selectedProduct.stock[volume] || 0,
+          isAvailable: (selectedProduct.stock[volume] || 0) > 0,
+        };
+      });
+      setStockStatus(initialStockStatus);
     } else if (
       selectedProduct.category === "clothes" ||
       selectedProduct.category === "shoes"
     ) {
-      setVariantOptions(selectedProduct.size || []);
-      setVariantTitle("Select the size:");
+      setVariantOptions(selectedProduct.sizes || []);
+      setVariantLabel("Select the size:");
+      // Initialize stock status for all sizes
+      const initialStockStatus = {};
+      selectedProduct.sizes?.forEach((size) => {
+        initialStockStatus[size] = {
+          stockAvailable: selectedProduct.stock[size] || 0,
+          isAvailable: (selectedProduct.stock[size] || 0) > 0,
+        };
+      });
+      setStockStatus(initialStockStatus);
     }
   }, [selectedProduct]);
 
   // for quantity changes
   const increaseQuantity = () => {
-    setItemQuantity((prev) => prev + 1);
+    if (
+      selectedVariant &&
+      stockStatus[selectedVariant]?.stockAvailable > itemQuantity
+    ) {
+      setItemQuantity((prev) => prev + 1);
+    } else {
+      toast.error(
+        `Only ${
+          stockStatus[selectedVariant]?.stockAvailable || 0
+        } items available`
+      );
+    }
   };
 
   const decreaseQuantity = () => {
@@ -46,41 +79,77 @@ const ProductDescription = () => {
 
   //  variant selection
   const variantSelect = (variant) => {
-    setSelectedVariant(variant);
+    if (stockStatus[variant]?.stockAvailable > 0) {
+      setSelectedVariant(variant);
+      setItemQuantity(1);
+    } else {
+      toast.error("This variant is out of stock");
+    }
   };
+
+  const checkStock = async (selectedVariant, itemQuantity) => {
+    try {
+      const res = await api.verifyStock(
+        selectedProduct.name,
+        selectedVariant,
+        itemQuantity
+      );
+      if (res.data.success) {
+        setStockStatus((prev) => ({
+          ...prev,
+          [selectedVariant]: {
+            stockAvailable: res.data.stockAvailable,
+            isAvailable: res.data.isAvailable,
+          },
+        }));
+
+        if (!res.data.isAvailable) {
+          toast.error(res.data.message);
+          setItemQuantity(Math.min(itemQuantity, res.data.stockAvailable));
+        }
+      }
+    } catch (error) {
+      console.error("Error checking stock:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedProduct.name && selectedVariant) {
+      checkStock(selectedVariant, itemQuantity);
+    }
+  }, [selectedProduct.name, selectedVariant, itemQuantity]);
 
   //  add to cart
   const handleAddToCart = () => {
     // Validate selections before adding to cart
     if (!selectedVariant && variantOptions.length > 0) {
-      alert("Please select a variant");
+      toast.error("Please select a variant");
       return;
     }
-    const cartItem = {
-      ...selectedProduct,
-      selectedVariant,
-      itemQuantity,
-    };
 
-    console.log("Adding to cart:", cartItem);
-    // Add dispatch logic here
-    dispatch(addToCart(cartItem));
-    alert("Added to cart successfully!");
-  };
-
-  // Add this state for review filtering
-  const [reviewFilter, setReviewFilter] = useState("all"); // 'all', 'top', 'new'
-
-  // Add this helper function for filtering reviews
-  const getFilteredReviews = (reviews) => {
-    switch (reviewFilter) {
-      case "top":
-        return [...reviews].sort((a, b) => b.rating - a.rating);
-      case "new":
-        return [...reviews].sort((a, b) => new Date(b.date) - new Date(a.date));
-      default:
-        return reviews;
+    if (!stockStatus[selectedVariant]?.isAvailable) {
+      toast.error(
+        `Only ${
+          stockStatus[selectedVariant]?.stockAvailable || 0
+        } items available`
+      );
+      return;
     }
+
+    dispatch(
+      addToCartAsync({
+        product: selectedProduct,
+        variant: selectedVariant,
+        quantity: itemQuantity,
+      })
+    )
+      .unwrap()
+      .then(() => {
+        toast.success("Added to cart successfully!");
+      })
+      .catch((err) => {
+        toast.error(err);
+      });
   };
 
   return (
@@ -109,7 +178,7 @@ const ProductDescription = () => {
           <div className="rounded-2xl overflow-hidden border border-purple-500/20 shadow-xl shadow-purple-500/5 bg-white/5 backdrop-blur-sm p-6">
             <div className="aspect-[4/3]">
               <img
-                src={selectedProduct.image}
+                src={`${config.apiBaseUrl}${config.uploadsPath}/${selectedProduct.image}`}
                 alt={selectedProduct.name}
                 className="w-full h-full object-contain hover:scale-105 transition-transform duration-500"
               />
@@ -127,13 +196,12 @@ const ProductDescription = () => {
                 <span className="px-4 py-1.5 bg-pink-500 text-black text-sm font-medium rounded-full">
                   {selectedProduct.category}
                 </span>
-                <div className="flex items-center bg-white/10 px-4 py-1.5 rounded-full">
-                  <span className="text-yellow-400">★</span>
-                  <span className="text-white/70 text-sm ml-1.5">
-                    {selectedProduct.rating}
-                  </span>
-                </div>
               </div>
+              <span className="px-4 py-1.5 bg-pink-500 text-black text-sm font-medium rounded-full">
+                {Array.isArray(selectedProduct.genres)
+                  ? selectedProduct.genres.join(", ")
+                  : ""}
+              </span>
             </div>
 
             {/* Description */}
@@ -143,7 +211,7 @@ const ProductDescription = () => {
 
             {/* Size/Volume Selection */}
             <div className="space-y-4">
-              <h3 className="text-white/90 font-medium">{variantTitle}</h3>
+              <h3 className="text-white/90 font-medium">{variantLabel}</h3>
               <div className="flex flex-wrap gap-3">
                 {variantOptions.map((variant) => (
                   <button
@@ -153,10 +221,15 @@ const ProductDescription = () => {
                       ${
                         selectedVariant === variant
                           ? "bg-yellow-500 text-black"
-                          : "bg-white/10 text-white/70 hover:bg-white/20"
+                          : stockStatus[variant]?.stockAvailable > 0
+                          ? "bg-white/10 text-white/70 hover:bg-white/20"
+                          : "bg-red-500/20 text-red-500/70 cursor-not-allowed"
                       }`}
+                    disabled={stockStatus[variant]?.stockAvailable === 0}
                   >
                     {variant}
+                    {stockStatus[variant]?.stockAvailable === 0 &&
+                      " (Out of Stock)"}
                   </button>
                 ))}
               </div>
@@ -188,7 +261,7 @@ const ProductDescription = () => {
             <div className="flex items-center justify-between pt-8 border-t border-white/10">
               <div>
                 <p className="text-white/60">Total Price</p>
-                <p className="text-3xl font-bold text-white">Rs. 1,999</p>
+                <p className="text-3xl font-bold text-white">{totalPrice} $</p>
               </div>
               <button
                 onClick={handleAddToCart}
@@ -197,86 +270,6 @@ const ProductDescription = () => {
                 Add to Cart
               </button>
             </div>
-          </div>
-        </div>
-
-        {/* Reviews Section */}
-        <div className="mb-16 space-y-8">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8">
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">
-              Customer Reviews
-            </h2>
-            <div className="flex flex-wrap gap-3">
-              {["All Reviews", "Top Rated", "Recent", "Add review"].map(
-                (filter) => (
-                  <button
-                    key={filter}
-                    className="px-4 py-2 rounded-lg text-sm font-medium bg-white/10 text-white/70 hover:bg-white/20 transition-all duration-300 cursor-pointer"
-                  >
-                    {filter}
-                  </button>
-                )
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[1, 2, 3, 4].map((review) => (
-              <div
-                key={review}
-                className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 hover:border-pink-500/30 transition-all duration-300"
-              >
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-pink-500 to-purple-600" />
-                  <div>
-                    <h4 className="font-medium text-white/90">Customer Name</h4>
-                    <div className="flex items-center gap-1 text-yellow-400">
-                      ★★★★★
-                    </div>
-                  </div>
-                </div>
-                <p className="text-white/70">
-                  Amazing product! The quality exceeded my expectations...
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Similar Products */}
-        <div className="space-y-8">
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">
-            You May Also Like
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((product) => (
-              <div
-                key={product}
-                className="group bg-white/5 backdrop-blur-sm rounded-xl overflow-hidden border border-white/10 hover:border-pink-500/30 transition-all duration-300"
-              >
-                <div className="aspect-square overflow-hidden bg-white/5">
-                  <img
-                    src={assets.genos}
-                    alt="Similar Product"
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                </div>
-                <div className="p-4">
-                  <h3 className="text-white/90 font-medium mb-2">
-                    Product Name
-                  </h3>
-                  <div className="flex items-center justify-between">
-                    <p className="text-transparent bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text font-bold">
-                      Rs. 1,999
-                    </p>
-                    <div className="flex items-center gap-1">
-                      <span className="text-yellow-400">★</span>
-                      <span className="text-white/70">4.5</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>

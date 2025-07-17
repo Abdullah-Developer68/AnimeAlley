@@ -1,14 +1,11 @@
-import Navbar from "../components/Global/Navbar";
 import Banner from "../components/Home/Banner";
 import ComicsSection from "../components/Home/ComicsSection";
 import ClothesSection from "../components/Home/ClothesSection";
 import ActionFigureSection from "../components/Home/ActionFigureSection";
-import Footer from "../components/Global/Footer";
 
 const Home = () => {
   return (
     <>
-      <Navbar />
       <Banner />
 
       <div className="w-screen h-1 bg-red-500" />

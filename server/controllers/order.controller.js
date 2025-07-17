@@ -1,11 +1,13 @@
-const orderModel = require("../models/order.model.js");
+const orderModel = require("../models/Order.model.js");
 const userModel = require("../models/user.model.js");
 const productModel = require("../models/product.model.js");
+const couponModel = require("../models/coupon.model.js");
+const Reservation = require("../models/reservation.model.js");
 
 const placeOrder = async (req, res) => {
   try {
     const {
-      cartItems,
+      cartItems, // not used for order, reservation is source of truth
       couponCode,
       subtotal,
       discountedPrice,
@@ -14,20 +16,16 @@ const placeOrder = async (req, res) => {
       userInfo,
       deliveryAddress,
       paymentMethod,
+      cartId,
     } = req.body;
 
-    // Add validation for cartItems
-    if (!Array.isArray(cartItems) || cartItems.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Cart items are required and must be an array",
-      });
+    if (!cartId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "cartId is required" });
     }
 
-    // Debug logs
-    console.log("Cart Items:", JSON.stringify(cartItems, null, 2));
-    console.log("Pricing:", { subtotal, discountedPrice, finalCost });
-
+    // Validate essential order information
     if (!userInfo?.email || !deliveryAddress || !paymentMethod) {
       return res.status(400).json({
         success: false,
@@ -36,6 +34,7 @@ const placeOrder = async (req, res) => {
       });
     }
 
+    // Verify user exists in database
     const user = await userModel.findOne({ email: userInfo.email });
     if (!user) {
       return res.status(404).json({
@@ -44,41 +43,58 @@ const placeOrder = async (req, res) => {
       });
     }
 
-    const orderID = "ORD" + Date.now() + Math.floor(Math.random() * 1000);
+    // If a coupon is provided, check if the user has already used it
+    let couponDoc = null;
+    if (couponCode) {
+      couponDoc = await couponModel.findOne({ couponCode });
+      if (!couponDoc) {
+        return res.status(400).json({
+          success: false,
+          message: "Coupon not found.",
+        });
+      }
+      if (user.couponCodeUsed.includes(couponDoc._id)) {
+        return res.status(400).json({
+          success: false,
+          message: "You have already used this coupon.",
+        });
+      }
+    }
 
-    // Modified to use itemQuantity instead of quantity
-    const productsArray = await Promise.all(
-      cartItems.map(async (item) => {
-        const productId = item._id;
+    // Fetch reservation for this cartId
+    const reservation = await Reservation.findOne({ cartId });
+    if (
+      !reservation ||
+      !reservation.products ||
+      reservation.products.length === 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "No reserved products found for this cart.",
+      });
+    }
 
-        if (!productId) {
-          throw new Error(`Invalid product in cart: ${JSON.stringify(item)}`);
-        }
+    // Prepare order items array from reservation
+    const productsArray = reservation.products.map((item) => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      price: null, // will populate below
+      selectedVariant: item.variant,
+    }));
 
-        const product = await productModel.findById(productId);
-        if (!product) {
-          throw new Error(`Product not found: ${productId}`);
-        }
+    // Populate price for each product (for order record)
+    for (let item of productsArray) {
+      const product = await productModel.findById(item.productId);
+      item.price = product ? product.price : 0;
+    }
 
-        if (product.stock < item.itemQuantity) {
-          throw new Error(`Insufficient stock for product: ${product.name}`);
-        }
-
-        return {
-          productId: productId,
-          quantity: item.itemQuantity, // Changed from quantity to itemQuantity
-          price: product.price,
-        };
-      })
-    );
-
-    // Calculate discount safely
+    // Calculate final discount amount
     const discount =
       subtotal && discountedPrice ? subtotal - discountedPrice : 0;
 
-    // Create order with validated data
+    // Prepare order data object
     const orderData = {
-      orderID,
+      orderID: "ORD" + Date.now() + Math.floor(Math.random() * 1000),
       products: productsArray,
       user: user._id,
       shippingAddress: deliveryAddress,
@@ -90,29 +106,36 @@ const placeOrder = async (req, res) => {
       couponCode,
     };
 
+    // Create new order in database
     const newOrder = await orderModel.create(orderData);
 
-    // Update product stock and sold count
-    await Promise.all(
-      productsArray.map(async (item) => {
-        await productModel.findByIdAndUpdate(
-          item.productId,
-          {
-            $inc: {
-              stock: -item.quantity,
-              sold: item.quantity, // Increment sold count
-            },
+    // If a coupon was used, update its stats
+    if (couponCode && discount > 0) {
+      await couponModel.findOneAndUpdate(
+        { couponCode },
+        {
+          $inc: {
+            totalUsage: 1,
+            lifeTimeDiscount: discount,
           },
-          { new: true } // Return updated document
-        );
-      })
-    );
+        }
+      );
+      if (couponDoc && !user.couponCodeUsed.includes(couponDoc._id)) {
+        await userModel.findByIdAndUpdate(user._id, {
+          $addToSet: { couponCodeUsed: couponDoc._id },
+        });
+      }
+    }
 
-    // Update user's orders
+    // Add order reference to user's orders array
     await userModel.findByIdAndUpdate(user._id, {
       $push: { orders: newOrder._id },
     });
 
+    // Delete reservation after order is placed
+    await Reservation.deleteOne({ cartId });
+
+    // Get populated order details for response
     const populatedOrder = await orderModel
       .findById(newOrder._id)
       .populate("products.productId")
@@ -132,6 +155,214 @@ const placeOrder = async (req, res) => {
   }
 };
 
+const getOrderHistory = async (req, res) => {
+  const { email, currPage } = req.query;
+
+  // Validate user email and current page
+  if (!email || !currPage) {
+    return res.status(400).json({
+      success: false,
+      message: "User email and current page are required",
+    });
+  }
+
+  try {
+    // Verify user exists
+    const user = await userModel.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const ordersPerPage = 2;
+    const page = parseInt(currPage, 10) || 1;
+    const startIndex = (page - 1) * ordersPerPage;
+
+    // Get the total count of orders for this specific user
+    const totalOrders = await orderModel.countDocuments({ user: user._id });
+
+    if (totalOrders === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No orders found for this user",
+        paginatedOrders: [],
+        totalPages: 0,
+        totalOrders: 0,
+      });
+    }
+
+    const totalPages = Math.ceil(totalOrders / ordersPerPage);
+
+    // Fetch and populate orders with product and user details using pagination
+    const paginatedOrders = await orderModel
+      .find({ user: user._id })
+      .populate({
+        path: "products.productId",
+        select: "name price image description",
+      })
+      .populate({ path: "user", select: "email username" })
+      .sort({ createdAt: -1 })
+      .skip(startIndex)
+      .limit(ordersPerPage);
+
+    res.status(200).json({
+      success: true,
+      message: "Orders fetched successfully",
+      paginatedOrders,
+      totalPages,
+      totalOrders,
+    });
+  } catch (error) {
+    console.error("Error fetching order:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
+  }
+};
+
+const allOrdersList = async (req, res) => {
+  const { email, currPage } = req.query;
+
+  if (!email || !currPage) {
+    return res
+      .status(400)
+      .json({ message: "Email and current page are required!" });
+  }
+  const user = await userModel.findOne({ email });
+  // Check if user exists and is either admin or superAdmin
+  if (!user || (user.role !== "admin" && user.role !== "superAdmin")) {
+    return res.status(403).json("User is not authorized!");
+  }
+
+  const ordersPerPage = 20;
+  // Parse the current page number, default to 1 if invalid
+  const page = parseInt(currPage, 10) || 1;
+
+  const startIndex = (page - 1) * ordersPerPage;
+
+  try {
+    const totalOrders = await orderModel.countDocuments();
+
+    const totalPages = Math.ceil(totalOrders / ordersPerPage);
+
+    // Fetch only the orders for the current page using skip and limit
+    const currPageOrders = await orderModel
+      .find()
+      .sort({ createdAt: -1 }) // Sort orders by creation date, newest first
+      .skip(startIndex) // Skip orders from previous pages
+      .limit(ordersPerPage) // Limit to ordersPerPage results
+      .populate({
+        path: "products.productId",
+        select: "name price image description",
+      })
+      .populate({ path: "user", select: "email username" });
+
+    // Respond with paginated orders and pagination info
+    res.status(200).json({
+      success: true,
+      message: "Orders fetched successfully",
+      currPageOrders, // Orders for the current page
+      totalOrders, // Total number of orders (for frontend pagination)
+      totalPages,
+    });
+  } catch (error) {
+    // Handle and log any errors
+    console.error("Error fetching all orders:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
+  }
+};
+
+const deleteOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!orderId) {
+      return res.status(400).json({ message: "Order ID is required." });
+    }
+
+    const result = await orderModel.findByIdAndDelete(orderId);
+
+    if (!result) {
+      return res.status(404).json({ message: "Order not found." });
+    }
+
+    // Optional: You might want to remove the order reference from the user's order history as well.
+    // await userModel.updateMany({}, { $pull: { orders: orderId } });
+
+    res.status(200).json({
+      success: true,
+      message: `Order with ID: ${orderId} has been deleted.`,
+    });
+  } catch (error) {
+    console.error("Error deleting order:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error.",
+    });
+  }
+};
+
+const updateOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status } = req.body;
+
+    if (!orderId) {
+      return res.status(400).json({ message: "Order ID is required." });
+    }
+
+    const updatedOrder = await orderModel.findByIdAndUpdate(
+      orderId,
+      { status },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedOrder) {
+      return res.status(404).json({ message: "Order not found." });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Order status updated successfully.",
+      order: updatedOrder,
+    });
+  } catch (error) {
+    console.error("Error updating order:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error.",
+    });
+  }
+};
+
+// Controller to get order stats by status
+const getOrderStats = async (req, res) => {
+  try {
+    const stats = await orderModel.aggregate([
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+    ]);
+    const result = {};
+    stats.forEach((s) => {
+      result[s._id] = s.count;
+    });
+    res.json({ success: true, stats: result });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   placeOrder,
+  getOrderHistory,
+  allOrdersList,
+  deleteOrder,
+  updateOrder,
+  getOrderStats,
 };

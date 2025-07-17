@@ -3,36 +3,98 @@ import assests from "../assets/asset";
 import api from "../api/api";
 import { useNavigate } from "react-router-dom";
 import useAuth from "../Hooks/UseAuth";
+import { useState } from "react";
 
 const Signup = () => {
   const { setUser } = useAuth();
   const navigate = useNavigate();
-  // React Hook Form setup
+
+  // Step state: 1 = email, 2 = otp, 3 = username/password
+  const [step, setStep] = useState(1);
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Step 1: Email form
   const {
-    register,
-    handleSubmit,
-    formState: { errors },
+    register: registerEmail,
+    handleSubmit: handleSubmitEmail,
+    formState: { errors: emailErrors },
   } = useForm();
 
-  const onsubmit = async (data) => {
-    try {
-      console.log("Sending signup data:", data);
-      const res = await api.post("/auth/signup", data);
-      console.log("Signup res:", res.data);
+  // Step 2: OTP form
+  const {
+    register: registerOtp,
+    handleSubmit: handleSubmitOtp,
+    formState: { errors: otpErrors },
+  } = useForm();
 
+  // Step 3: Username/password form
+  const {
+    register: registerSignup,
+    handleSubmit: handleSubmitSignup,
+    formState: { errors: signupErrors },
+  } = useForm();
+
+  // Handle sending OTP (Step 1 and resend)
+  const sendOtp = async (data) => {
+    setLoading(true);
+    setError("");
+    try {
+      await api.post("/auth/send-otp", { email: data.email || email });
+      setEmail(data.email || email);
+      setStep(2);
+      setResendCooldown(30); // 30s cooldown
+      // Start cooldown timer
+      const interval = setInterval(() => {
+        setResendCooldown((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to send OTP");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle verifying OTP (Step 2)
+  const verifyOtp = async (data) => {
+    setLoading(true);
+    setError("");
+    try {
+      await api.post("/auth/verify-otp", { email, otp: data.otp });
+      setStep(3);
+    } catch (err) {
+      setError(err.response?.data?.message || "Invalid or expired OTP");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle final signup (Step 3)
+  const onSignup = async (data) => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await api.post("/auth/signup", { email, ...data });
       if (res.data.success) {
-        // Update auth context with user data
+        localStorage.clear();
         setUser(res.data.user);
-        // Store in localStorage if needed
         localStorage.setItem("userInfo", JSON.stringify(res.data.user));
-        // Navigate to home page
         navigate("/");
+      } else {
+        setError(res.data.message || "Signup failed");
       }
-    } catch (error) {
-      console.error("Signup error:", {
-        message: error.res?.data?.message || error.message,
-        status: error.res?.status,
-      });
+    } catch (err) {
+      setError(err.response?.data?.message || "Signup failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -42,87 +104,174 @@ const Signup = () => {
 
   return (
     <>
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#0b0133] to-[#1a0266] px-4 py-6 mt-10">
+      <div className="min-h-screen flex items-center justify-center px-4 py-6 mt-10">
         <div className="w-full max-w-md p-4 sm:p-8 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 shadow-xl">
-          {/* Header - Reduced size on mobile */}
           <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-center text-white/90">
             Sign Up
           </h2>
 
-          <form
-            onSubmit={handleSubmit(onsubmit)}
-            className="space-y-4 sm:space-y-6"
-          >
-            {/* Input Fields - Reduced padding on mobile */}
-            <div>
-              <label className="block text-white/70 mb-1.5 text-sm">
-                Username
-              </label>
-              <input
-                type="text"
-                className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-pink-500/50 transition-colors"
-                placeholder="Enter your username"
-                {...register("username", {
-                  required: "Username is required!",
-                })}
-              />
-              {errors.username && (
-                <span className="text-pink-500 text-xs sm:text-sm mt-1">
-                  {errors.username.message}
-                </span>
-              )}
-            </div>
-
-            {/* Email field - Similar compact styling */}
-            <div>
-              <label className="block text-white/70 mb-1.5 text-sm">
-                Email
-              </label>
-              <input
-                type="email"
-                className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-pink-500/50 transition-colors"
-                placeholder="Enter your email"
-                {...register("email", { required: "Email is required!" })}
-              />
-              {errors.email && (
-                <span className="text-pink-500 text-xs sm:text-sm mt-1">
-                  {errors.email.message}
-                </span>
-              )}
-            </div>
-
-            {/* Password field - Similar compact styling */}
-            <div>
-              <label className="block text-white/70 mb-1.5 text-sm">
-                Password
-              </label>
-              <input
-                type="password"
-                className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-pink-500/50 transition-colors"
-                placeholder="Enter your password"
-                {...register("password", {
-                  required: "Password is required!",
-                  minLength: {
-                    value: 8,
-                    message: "Password must be at least 8 characters.",
-                  },
-                })}
-              />
-              {errors.password && (
-                <span className="text-pink-500 text-xs sm:text-sm mt-1">
-                  {errors.password.message}
-                </span>
-              )}
-            </div>
-
-            {/* Submit Button - Adjusted padding */}
-            <button
-              type="submit"
-              className="w-full py-2.5 sm:py-3 rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm sm:text-base font-medium hover:shadow-lg hover:shadow-pink-500/25 transition-all duration-300 cursor-pointer"
+          {/* Step 1: Email */}
+          {step === 1 && (
+            <form
+              onSubmit={handleSubmitEmail(sendOtp)}
+              className="space-y-4 sm:space-y-6"
             >
-              Sign Up
-            </button>
-          </form>
+              <div>
+                <label className="block text-white/70 mb-1.5 text-sm">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-pink-500/50 transition-colors"
+                  placeholder="Enter your email"
+                  {...registerEmail("email", {
+                    required: "Email is required!",
+                  })}
+                  disabled={loading}
+                />
+                {emailErrors.email && (
+                  <span className="text-pink-500 text-xs sm:text-sm mt-1">
+                    {emailErrors.email.message}
+                  </span>
+                )}
+              </div>
+              {error && <div className="text-pink-500 text-sm">{error}</div>}
+              <button
+                type="submit"
+                className="w-full py-2.5 sm:py-3 rounded-lg bg-pink-500 text-black text-sm sm:text-base font-medium hover:shadow-lg hover:shadow-pink-500/25 transition-all duration-300 cursor-pointer"
+                disabled={loading}
+              >
+                {loading ? "Sending OTP..." : "Continue"}
+              </button>
+            </form>
+          )}
+
+          {/* Step 2: OTP */}
+          {step === 2 && (
+            <form
+              onSubmit={handleSubmitOtp(verifyOtp)}
+              className="space-y-4 sm:space-y-6"
+            >
+              <div>
+                <label className="block text-white/70 mb-1.5 text-sm">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-pink-500/50 transition-colors"
+                  value={email}
+                  disabled
+                />
+              </div>
+              <div>
+                <label className="block text-white/70 mb-1.5 text-sm">
+                  OTP
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-pink-500/50 transition-colors"
+                  placeholder="Enter OTP"
+                  {...registerOtp("otp", { required: "OTP is required!" })}
+                  disabled={loading}
+                />
+                {otpErrors.otp && (
+                  <span className="text-pink-500 text-xs sm:text-sm mt-1">
+                    {otpErrors.otp.message}
+                  </span>
+                )}
+              </div>
+              {error && <div className="text-pink-500 text-sm">{error}</div>}
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 sm:py-3 rounded-lg bg-pink-500 text-black text-sm sm:text-base font-medium hover:shadow-lg hover:shadow-pink-500/25 transition-all duration-300 cursor-pointer"
+                  disabled={loading}
+                >
+                  {loading ? "Verifying..." : "Verify OTP"}
+                </button>
+                <button
+                  type="button"
+                  className="flex-1 py-2.5 sm:py-3 rounded-lg bg-white/10 border border-white/20 text-white text-sm sm:text-base hover:bg-white/20 transition-all duration-300 cursor-pointer"
+                  onClick={() => sendOtp({ email })}
+                  disabled={resendCooldown > 0}
+                >
+                  {resendCooldown > 0
+                    ? `Resend OTP (${resendCooldown}s)`
+                    : "Resend OTP"}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Step 3: Username/Password */}
+          {step === 3 && (
+            <form
+              onSubmit={handleSubmitSignup(onSignup)}
+              className="space-y-4 sm:space-y-6"
+            >
+              <div>
+                <label className="block text-white/70 mb-1.5 text-sm">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-pink-500/50 transition-colors"
+                  value={email}
+                  disabled
+                />
+              </div>
+              <div>
+                <label className="block text-white/70 mb-1.5 text-sm">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-pink-500/50 transition-colors"
+                  placeholder="Enter your username"
+                  {...registerSignup("username", {
+                    required: "Username is required!",
+                  })}
+                  disabled={loading}
+                />
+                {signupErrors.username && (
+                  <span className="text-pink-500 text-xs sm:text-sm mt-1">
+                    {signupErrors.username.message}
+                  </span>
+                )}
+              </div>
+              <div>
+                <label className="block text-white/70 mb-1.5 text-sm">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-white/10 border border-white/20 text-white text-sm placeholder:text-white/40 focus:outline-none focus:border-pink-500/50 transition-colors"
+                  placeholder="Enter your password"
+                  {...registerSignup("password", {
+                    required: "Password is required!",
+                    minLength: {
+                      value: 8,
+                      message: "Password must be at least 8 characters.",
+                    },
+                  })}
+                  disabled={loading}
+                />
+                {signupErrors.password && (
+                  <span className="text-pink-500 text-xs sm:text-sm mt-1">
+                    {signupErrors.password.message}
+                  </span>
+                )}
+              </div>
+              {error && <div className="text-pink-500 text-sm">{error}</div>}
+              <button
+                type="submit"
+                className="w-full py-2.5 sm:py-3 rounded-lg bg-pink-500 text-black text-sm sm:text-base font-medium hover:shadow-lg hover:shadow-pink-500/25 transition-all duration-300 cursor-pointer"
+                disabled={loading}
+              >
+                {loading ? "Signing Up..." : "Sign Up"}
+              </button>
+            </form>
+          )}
 
           {/* Divider - Reduced margins */}
           <div className="relative mt-6 mb-4 sm:mt-8 sm:mb-6">
@@ -137,7 +286,6 @@ const Signup = () => {
           </div>
 
           {/* Google Button */}
-
           <button
             className="w-full py-2.5 sm:py-3 rounded-lg bg-white/10 border border-white/20 text-white text-sm sm:text-base hover:bg-white/20 transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer"
             onClick={handleGoogleLogin}

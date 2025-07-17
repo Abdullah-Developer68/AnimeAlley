@@ -1,7 +1,11 @@
 import assets from "../../assets/asset";
 import { Link } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { setCategory } from "../../redux/Slice/shopSlice";
 
 const ActionFigureSection = () => {
+  const dispatch = useDispatch();
+
   return (
     <div
       className={`relative flex flex-col md:flex-row justify-center items-center overflow-hidden h-screen bg-cover bg-center bg-no-repeat bg-opacity-75`}
@@ -19,8 +23,11 @@ const ActionFigureSection = () => {
           <p className="text-gray-300 text-lg">
             Perfectly crafted for the ultimate collector.
           </p>
-          <Link to={"collection"}>
-            <button className="mt-6 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-full font-bold transition duration-300">
+          <Link to="/shop" className="z-40">
+            <button
+              className="mt-6 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-full font-bold transition duration-300"
+              onClick={() => dispatch(setCategory("toys"))}
+            >
               Explore Now
             </button>
           </Link>

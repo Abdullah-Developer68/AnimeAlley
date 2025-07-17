@@ -1,5 +1,5 @@
 import { useSelector, useDispatch } from "react-redux";
-import { updateTotalPages } from "../../redux/Slice/shopSlice";
+import { updateTotalPages, updateCurrPage } from "../../redux/Slice/shopSlice";
 import { useEffect, useState } from "react";
 import Cards from "../Global/Card";
 import api from "../../api/api";
@@ -9,29 +9,32 @@ const ProductGrid = () => {
   const dispatch = useDispatch();
   //Access the category state and filters of that category from the redux store
   const currCategory = useSelector((state) => state.shop.currCategory);
-  const activeFilters = useSelector((state) => state.shop.activeFilters);
+  const appliedFilters = useSelector((state) => state.shop.productTypes);
   const currPage = useSelector((state) => state.shop.currPage);
+
+  // reset page to 1 after category changes
+  useEffect(() => {
+    dispatch(updateCurrPage(1));
+  }, [currCategory]);
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        // Format the filter data for the API
-        const productConstraints = {
-          activeFilters: activeFilters.activeFilters || [],
-          price: activeFilters.price || 0,
-          sortBy: activeFilters.sortBy || "popular",
+        const { productTypes, price, sortBy, searchQuery } = appliedFilters;
+
+        // Create a single object with all constraints
+        const apiPayload = {
+          category: currCategory.toLowerCase(),
+          productTypes: productTypes || ["all"],
+          price: price || 0,
+          sortBy: sortBy || "popular",
+          page: currPage,
+          searchQuery: searchQuery || "",
         };
 
-        console.log("Sending to API:", {
-          category: currCategory.toLowerCase(),
-          productConstraints,
-        });
+        console.log("Sending to API:", apiPayload);
 
-        const response = await api.getProducts(
-          currCategory.toLowerCase(),
-          productConstraints,
-          currPage
-        );
+        const response = await api.getProducts(apiPayload);
 
         if (response.data.success) {
           setProducts(response.data.currPageProducts);
@@ -46,7 +49,7 @@ const ProductGrid = () => {
       }
     };
     fetchProducts();
-  }, [currCategory, activeFilters, currPage]);
+  }, [currCategory, appliedFilters, currPage]);
 
   console.log("products");
   console.log(products);

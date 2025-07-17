@@ -1,13 +1,17 @@
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import { Link } from "react-router-dom";
+import { setCategory } from "../../redux/Slice/shopSlice";
+import { useDispatch } from "react-redux";
 import assets from "../../assets/asset";
 
 const ClothesSection = () => {
+  const dispatch = useDispatch();
   const products = [
-    { image: assets.sao, label: "Shirts" },
-    { image: assets.sao, label: "Pants" },
-    { image: assets.sao, label: "Shoes" },
+    { image: assets.aotHoddie, label: "Hoddy" },
+    { image: assets.jjkPants, label: "Pants" },
+    { image: assets.narutoShoes, label: "Shoes" },
   ];
 
   const settings = {
@@ -52,11 +56,19 @@ const ClothesSection = () => {
       className="relative flex flex-col justify-center items-center w-full min-h-[690px] overflow-hidden bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: `url(${assets.halloweenBackground})` }}
     >
-      <div className="absolute inset-0 bg-black opacity-20"></div>
+      <div className="absolute inset-0 bg-black opacity-20 pointer-events-none"></div>
 
       <h2 className="z-40 text-2xl md:text-3xl lg:text-4xl font-bold text-orange-500 mb-8 text-center tracking-wider mt-16 md:mt-24 px-4">
         Spooky Fashion Collection
       </h2>
+      <Link to={"/shop"} className="z-40">
+        <div
+          className="bg-orange-500 px-4 py-2 rounded-full mb-10 cursor-pointer z-10"
+          onClick={() => dispatch(setCategory("clothes"))}
+        >
+          Shop Now!
+        </div>
+      </Link>
 
       {/* Product Cards Slider */}
       <div className="z-40 w-full max-w-6xl mx-auto px-8">
@@ -64,12 +76,12 @@ const ClothesSection = () => {
           <Slider {...settings}>
             {products.map((product, index) => (
               <div key={index} className="px-2">
-                <div className="group relative w-full max-w-[140px] sm:max-w-[160px] md:max-w-[180px] mx-auto bg-black/60 backdrop-blur-sm border border-orange-500/40 rounded-lg shadow-lg overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-orange-500/20 hover:border-orange-500/60">
+                <div className="group relative w-full max-w-[140px] sm:max-w-[160px] md:max-w-[180px] mx-auto bg-black/60 backdrop-blur-sm border border-orange-500/40 rounded-lg shadow-lg overflow-hidden transition-all duration-300 hover:scale-100 hover:shadow-orange-500/20 hover:border-orange-500/60">
                   <div className="w-full aspect-[3/4] overflow-hidden">
                     <img
                       src={product.image}
                       alt={product.label}
-                      className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-110"
+                      className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
                     />
                   </div>
 
