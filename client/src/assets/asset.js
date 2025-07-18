@@ -13,7 +13,7 @@ import comics from "./img/shopPics/comics.gif";
 import actionfigure from "./img/shopPics/actionfigure.gif";
 import clothes from "./img/shopPics/clothes.gif";
 import shoes from "./img/shopPics/shoes.gif";
-import google from "./img/signUpPics/google.svg";
+import google from "./img/SignUpPics/google.svg";
 import house from "./img/shopPics/house.png";
 import prevBtn from "./img/shopPics/prev.svg";
 import nextBtn from "./img/shopPics/next.svg";
