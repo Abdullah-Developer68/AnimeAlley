@@ -11,7 +11,7 @@ const allowedOrigins = [
 
 // Simple CORS middleware
 const corsMiddleware = cors({
-  origin: true,
+  origin: allowedOrigins,
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
