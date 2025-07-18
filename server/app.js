@@ -13,7 +13,7 @@ const app = express();
 //  and so that is why it is not in strip.routes.js
 const {
   handleStripeWebhook,
-} = require("./controllers/stripeWebhook.controller.js");
+} = require("./controllers/stripeWebHook.controller.js");
 
 app.post(
   "/api/stripe/webhook",
