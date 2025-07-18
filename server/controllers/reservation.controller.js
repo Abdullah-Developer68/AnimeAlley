@@ -1,6 +1,6 @@
 // server/controllers/reservation.controller.js
-const Reservation = require("../models/reservation.model");
-const Product = require("../models/product.model");
+const Reservation = require("../models/reservation.model.js");
+const Product = require("../models/product.model.js");
 
 const reserveStock = async (req, res) => {
   try {

@@ -1,6 +1,6 @@
 // server/utils/cleanupReservations.js
-const Reservation = require("../models/reservation.model");
-const Product = require("../models/product.model");
+const Reservation = require("../models/reservation.model.js");
+const Product = require("../models/product.model.js");
 
 async function cleanupExpiredReservations() {
   const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);

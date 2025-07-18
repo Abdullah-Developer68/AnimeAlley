@@ -7,7 +7,7 @@ const {
   login,
   logout,
   verifyToken,
-} = require("../../services/auth");
+} = require("../../services/auth.js");
 
 router.post("/send-otp", makNSenOTP); // creates in auth.js and sends via sendOTP in utils
 router.post("/verify-otp", verifyOTP);

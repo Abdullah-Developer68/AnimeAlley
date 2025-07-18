@@ -1,9 +1,9 @@
-const userModel = require("../models/user.model");
+const userModel = require("../models/user.model.js");
 const {
   dataConfigs,
   generateExcel,
   generatePdf,
-} = require("../services/export.service");
+} = require("../services/export.service.js");
 
 const exportData = async (req, res) => {
   const { dataType } = req.params;

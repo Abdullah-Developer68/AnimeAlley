@@ -1,7 +1,7 @@
 const express = require("express");
-const dbConnect = require("./config/dbConnect");
+const dbConnect = require("./config/dbConnect.js");
 const dotenv = require("dotenv");
-const passport = require("./config/passport"); // Initialize Passport configuration
+const passport = require("./config/passport.js"); // Initialize Passport configuration
 
 dotenv.config(); // Load environment variables from .env file
 const path = require("path"); // Use path module for file paths
@@ -23,7 +23,7 @@ app.post(
 
 // Import middlewares and executes them
 require("./middlewares/index.middleware.js")(app);
-require("./utils/cleanUp"); // automaically cleans unverified users that were created a Week Ago
+require("./utils/cleanUp.js"); // automaically cleans unverified users that were created a Week Ago
 
 // Custom middlewares
 app.use(passport.initialize());

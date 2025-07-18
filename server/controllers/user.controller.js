@@ -1,5 +1,5 @@
 const userModel = require("../models/user.model.js");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 
 const getUsers = async (req, res) => {
   const { viewerEmail, currPage, searchQuery = "", role } = req.query;
@@ -222,8 +222,7 @@ const updateUser = async (req, res) => {
     if (createdAt) updateObj.createdAt = createdAt;
     if (req.file) updateObj.profilePic = req.file.filename;
     if (password) {
-      const salt = await bcrypt.genSalt(10);
-      updateObj.password = await bcrypt.hash(password, salt);
+      updateObj.password = await bcrypt.hash(password, 10);
     }
     // Only allow role change if superAdmin and valid
     if (

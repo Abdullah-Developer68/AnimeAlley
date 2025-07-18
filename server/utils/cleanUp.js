@@ -1,5 +1,5 @@
 const cron = require("node-cron");
-const userModel = require("../models/user.model");
+const userModel = require("../models/user.model.js");
 
 // Runs every day at 2:00 AM
 cron.schedule("0 2 * * *", async () => {

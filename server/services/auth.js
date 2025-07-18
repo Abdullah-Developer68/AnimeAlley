@@ -1,8 +1,8 @@
-const userModel = require("../models/user.model");
+const userModel = require("../models/user.model.js");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
-const sendOTP = require("../utils/sendOTP");
+const sendOTP = require("../utils/sendOTP.js");
 
 dotenv.config();
 
@@ -58,8 +58,7 @@ const signUp = async (req, res) => {
       });
     }
     // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedPassword = await bcrypt.hash(password, 10);
     // Update user fields and set role to user
     user.username = username;
     user.password = hashedPassword;
@@ -103,7 +102,7 @@ const login = async (req, res) => {
         .json({ success: false, status: false, message: "User not found!" });
     }
 
-    const passwordMatch = bcrypt.compare(password, userExist.password);
+    const passwordMatch = await bcrypt.compare(password, userExist.password);
     if (!passwordMatch) {
       return res.status(401).json({
         status: false,

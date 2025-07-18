@@ -1,10 +1,10 @@
 // Import all middleware instances
-const cookieParserMiddleware = require("./modules/cookieParser.middleware");
-const corsMiddleware = require("./modules/cors.middleware");
-const expSession = require("./modules/session.middleware");
-const jsonParserMiddleware = require("./modules/jsonParser.middleware");
-const urlEncodedParser = require("./modules/urlEncodedParser.middleware");
-const morganMiddleware = require("./modules/morgan.middleware");
+const cookieParserMiddleware = require("./modules/cookieParser.middleware.js");
+const corsMiddleware = require("./modules/cors.middleware.js");
+const expSession = require("./modules/session.middleware.js");
+const jsonParserMiddleware = require("./modules/jsonParser.middleware.js");
+const urlEncodedParser = require("./modules/urlEncodedParser.middleware.js");
+const morganMiddleware = require("./modules/morgan.middleware.js");
 
 // Apply all middlewares with app instance
 module.exports = (app) => {

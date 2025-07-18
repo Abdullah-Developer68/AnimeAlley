@@ -1,13 +1,13 @@
 const express = require("express");
 const router = express.Router();
-const passport = require("../../config/passport");
+const passport = require("../../config/passport.js");
 
 const {
   LogoutFromGoogle,
   initiateGoogleAuth,
   handleGoogleCallback,
   sendUserData,
-} = require("../../services/googleAuth");
+} = require("../../services/googleAuth.js");
 
 // Route to initiate Google OAuth
 router.get("/login", (req, res, next) => {

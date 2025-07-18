@@ -4,7 +4,7 @@ const {
   reserveStock,
   releaseStock,
   decrementReservationStock,
-} = require("../../controllers/reservation.controller");
+} = require("../../controllers/reservation.controller.js");
 
 router.post("/reserveStock", reserveStock);
 router.post("/releaseStock", releaseStock);

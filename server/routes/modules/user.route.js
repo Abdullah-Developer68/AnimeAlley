@@ -5,8 +5,8 @@ const {
   deleteUser,
   updateUser,
   checkUserRole,
-} = require("../../controllers/user.controller");
-const upload = require("../../middlewares/modules/multerConfig");
+} = require("../../controllers/user.controller.js");
+const upload = require("../../middlewares/modules/multerConfig.js");
 
 // Route to get a paginated list of all users (admin-only)
 router.get("/getUsers", getUsers);
