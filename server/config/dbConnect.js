@@ -1,17 +1,28 @@
-const mongoose = require("mongoose");
-const dotenv = require("dotenv");
-//loads variables from .env
-dotenv.config();
+const { MongoClient, ServerApiVersion } = require("mongodb");
 
-const MONGODB_URI = process.env.MONGODB_URI;
-const dbConnect = async () => {
+const uri = process.env.MONGO_URI; // Should include your credentials and cluster info, but not the db name
+
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  },
+});
+
+let db;
+
+async function connectDB() {
+  if (db) return db; // Reuse existing connection
   try {
-    await mongoose.connect(`${MONGODB_URI}`); // database name is in the connection string
-    console.log("Connected:" + mongoose.connection.host);
-  } catch (error) {
-    console.log("Error Connecting to Mongo DB!");
-    console.log(error);
+    await client.connect();
+    db = client.db("AnimeAlley"); // Use your database name here
+    console.log("Connected to MongoDB (AnimeAlley)");
+    return db;
+  } catch (err) {
+    console.error("MongoDB connection error:", err);
+    throw err;
   }
-};
+}
 
-module.exports = dbConnect;
+module.exports = { connectDB, client };
