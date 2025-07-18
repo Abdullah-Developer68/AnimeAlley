@@ -6,7 +6,7 @@ dotenv.config();
 const MONGODB_URI = process.env.MONGODB_URI;
 const dbConnect = async () => {
   try {
-    await mongoose.connect(`${MONGODB_URI}`); // database name is in connection String
+    await mongoose.connect(`${MONGODB_URI}AnimeAlley`); // database name is in connection String
     console.log("Connected:" + mongoose.connection.host);
   } catch (error) {
     console.log("Error Connecting to Mongo DB!");
