@@ -4,13 +4,18 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const MONGODB_URI = process.env.MONGODB_URI;
+const DB_NAME = process.env.DB_NAME || "AnimeAlley"; // fallback if not set
+
 const dbConnect = async () => {
   try {
-    await mongoose.connect(`${MONGODB_URI}`); // database name is in connection String
-
+    await mongoose.connect(MONGODB_URI, {
+      dbName: DB_NAME, // <--- Specify your database name here
+    });
     console.log(
-      "Connecting to MongoDB:",
-      process.env.MONGODB_URI ? "URI found" : "URI NOT FOUND"
+      "Connected to MongoDB:",
+      mongoose.connection.host,
+      "DB:",
+      DB_NAME
     );
   } catch (error) {
     console.log("Error Connecting to Mongo DB!");
