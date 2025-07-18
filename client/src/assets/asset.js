@@ -1,6 +1,6 @@
 import logo from "./img/logo.jpg";
 import search from "./img/search.svg";
-import banner from "./img/HomePics/banner.png";
+import banner from "./img/homePics/banner.png";
 import menu from "./img/menu.png";
 import genos from "./img/genos.jpeg";
 import goku from "./img/goku.png";
