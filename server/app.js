@@ -42,6 +42,9 @@ app.get("/", (req, res) => {
   res.send("Backend is running!");
 });
 
-app.listen(port, () => {
-  console.log(`Server is running at: http://localhost:${port}`);
-});
+// Remove or comment out this line for Vercel:
+// app.listen(port, () => {
+//   console.log(`Server is running at: http://localhost:${port}`);
+// });
+
+module.exports = app; // <-- Add this line for Vercel
