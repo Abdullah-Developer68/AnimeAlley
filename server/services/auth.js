@@ -75,7 +75,7 @@ const signUp = async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production", // true on Vercel
-      sameSite: "lax", // or 'none' if cross-site, but then secure must be true
+      sameSite: "none", // or 'none' if cross-site, but then secure must be true
       path: "/",
       // domain: '.your-app.vercel.app', // set if using custom domain or subdomain
     });
@@ -126,7 +126,13 @@ const login = async (req, res) => {
       { email: userExist.email, userid: userExist._id },
       secretKey
     );
-    res.cookie("token", token);
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production", // true on Vercel
+      sameSite: "none", // or 'none' if cross-site, but then secure must be true
+      path: "/",
+      // domain: '.your-app.vercel.app', // set if using custom domain or subdomain
+    });
 
     const user = {
       id: userExist._id,
