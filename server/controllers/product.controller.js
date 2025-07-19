@@ -64,6 +64,11 @@ const getProducts = async (req, res) => {
 
     const itemsPerPage = 20;
     const startIndex = (page - 1) * itemsPerPage;
+    console.log("Query:");
+    console.log(query);
+    console.log(sortOptions);
+    console.log(startIndex);
+    console.log(itemsPerPage);
 
     // Get the total count of products matching the query
     const totalProducts = await productModel.countDocuments(query);

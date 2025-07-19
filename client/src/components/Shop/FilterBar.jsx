@@ -133,7 +133,7 @@ const FilterBar = () => {
    * Custom background styling for range input based on current price
    */
   const getBackgroundStyle = (value) => {
-    const percentage = (value / 2000) * 100;
+    const percentage = (value / 100) * 100;
     return {
       background: `linear-gradient(to right, #EAB308 ${percentage}%, rgba(255, 255, 255, 0.1) ${percentage}%)`,
     };
@@ -234,16 +234,16 @@ const FilterBar = () => {
             <input
               type="range"
               min="0"
-              max="2000"
+              max="100"
               {...register("price")}
               onChange={(e) => setValue("price", Number(e.target.value))}
               style={getBackgroundStyle(formFields.price)}
               className="w-full h-2 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-yellow-500 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white"
             />
             <div className="absolute -bottom-6 left-0 right-0 flex justify-between text-white/70 text-sm">
-              <span>Rs. 0</span>
-              <span>Rs. {formFields.price}</span>
-              <span>Rs. 2000</span>
+              <span> 0 $</span>
+              <span> {formFields.price} $</span>
+              <span>100 $</span>
             </div>
           </div>
         </div>
