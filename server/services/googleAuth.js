@@ -1,6 +1,7 @@
 const passport = require("../config/passport.js");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
+const dbConnect = require("../config/dbConnect.js");
 
 /**
  * Step 1: Initial Authentication
@@ -31,6 +32,7 @@ const initiateGoogleAuth = (req, res, next) => {
  * 4. Establishes authentication state
  */
 const handleGoogleCallback = (req, res, next) => {
+  dbConnect();
   passport.authenticate("google", {
     failureRedirect: `${process.env.CLIENT_URL}/login`,
     session: true,
@@ -105,6 +107,7 @@ const LogoutFromGoogle = async (req, res) => {
  * 3. Handles error cases appropriately
  */
 const sendUserData = async (req, res) => {
+  dbConnect();
   try {
     if (req.isAuthenticated() && req.user) {
       res.status(200).json({

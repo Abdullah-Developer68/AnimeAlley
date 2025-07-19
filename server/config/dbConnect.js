@@ -4,15 +4,19 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const MONGODB_URI = process.env.MONGODB_URI;
+let isConnected = false;
 const dbConnect = async () => {
   try {
-    await mongoose.connect(`${MONGODB_URI}`); // database name is in connection String
-
-    console.log(
-      "Connecting to MongoDB:",
-      process.env.MONGODB_URI ? "URI found" : "URI NOT FOUND"
-    );
+    if (!isConnected) {
+      await mongoose.connect(`${MONGODB_URI}`); // database name is in connection String
+      isConnected = true;
+      console.log(
+        "Connecting to MongoDB:",
+        process.env.MONGODB_URI ? "URI found" : "URI NOT FOUND"
+      );
+    }
   } catch (error) {
+    isConnected = false;
     console.log("Error Connecting to Mongo DB!");
     console.log(error);
   }

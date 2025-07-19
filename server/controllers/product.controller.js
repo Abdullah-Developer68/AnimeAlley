@@ -2,8 +2,8 @@ const productModel = require("../models/product.model.js");
 const dbConnect = require("../config/dbConnect.js");
 
 const getProducts = async (req, res) => {
+  dbConnect();
   try {
-    dbConnect();
     // Destructure the productConstraints from the request query
     const { productConstraints } = req.query;
     const constraints = JSON.parse(productConstraints);
@@ -91,6 +91,7 @@ const getProducts = async (req, res) => {
 };
 
 const findProducts = async (req, res) => {
+  dbConnect();
   const { searchQuery } = req.query;
 
   if (!searchQuery) {
@@ -114,6 +115,7 @@ const findProducts = async (req, res) => {
 };
 
 const createProduct = async (req, res) => {
+  dbConnect();
   try {
     let imageFilename;
     if (req.file) {
@@ -205,6 +207,7 @@ const createProduct = async (req, res) => {
 };
 
 const updateProduct = async (req, res) => {
+  dbConnect();
   try {
     let imageFilename;
     if (req.file) {
@@ -300,6 +303,7 @@ const updateProduct = async (req, res) => {
 };
 
 const verifyStock = async (req, res) => {
+  dbConnect();
   try {
     const { itemName, selectedVariant, itemQuantity } = req.query;
 
@@ -362,6 +366,7 @@ const verifyStock = async (req, res) => {
 };
 
 const deleteProduct = async (req, res) => {
+  dbConnect();
   console.log("Delete product request received:", req.body);
   const { productID } = req.body;
 

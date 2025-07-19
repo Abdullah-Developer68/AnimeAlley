@@ -4,8 +4,10 @@ const {
   generateExcel,
   generatePdf,
 } = require("../services/export.service.js");
+const dbConnect = require("../config/dbConnect.js");
 
 const exportData = async (req, res) => {
+  dbConnect();
   const { dataType } = req.params;
   const { email, format } = req.query;
 

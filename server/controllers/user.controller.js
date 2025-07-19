@@ -1,7 +1,9 @@
 const userModel = require("../models/user.model.js");
 const bcrypt = require("bcrypt");
+const dbConnect = require("../config/dbConnect.js");
 
 const getUsers = async (req, res) => {
+  dbConnect();
   const { viewerEmail, currPage, searchQuery = "", role } = req.query;
 
   // Validate required parameters
@@ -71,6 +73,7 @@ const getUsers = async (req, res) => {
 };
 
 const deleteUser = async (req, res) => {
+  dbConnect();
   try {
     const { userId } = req.params;
     const { editorEmail } = req.body;
@@ -148,6 +151,7 @@ const deleteUser = async (req, res) => {
 };
 
 const updateUser = async (req, res) => {
+  dbConnect();
   try {
     const { userId } = req.params;
     const { username, email, role, createdAt, password, editorEmail } =
@@ -255,6 +259,7 @@ const updateUser = async (req, res) => {
 };
 
 const checkUserRole = async (req, res) => {
+  dbConnect();
   try {
     const { email } = req.query;
     if (!email) {

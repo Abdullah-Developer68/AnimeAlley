@@ -6,11 +6,13 @@ const userModel = require("../models/user.model.js");
 const productModel = require("../models/product.model.js");
 const couponModel = require("../models/coupon.model.js");
 dotenv.config();
+const dbConnect = require("../config/dbConnect.js");
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const webHookSecretKey = process.env.STRIPE_WEBHOOK_SECRET;
 
 const processSuccessfulPayment = async (session) => {
+  dbConnect();
   const {
     cartId,
     couponCode,
@@ -106,6 +108,7 @@ const processSuccessfulPayment = async (session) => {
 };
 
 const handleStripeWebhook = async (req, res) => {
+  dbConnect();
   console.log("Stripe webhook received!");
   const sig = req.headers["stripe-signature"];
   let event;

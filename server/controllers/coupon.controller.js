@@ -1,7 +1,9 @@
 const couponModel = require("../models/coupon.model.js");
 const userModel = require("../models/user.model.js");
+const dbConnect = require("../config/dbConnect.js");
 
 const checkCoupon = async (req, res) => {
+  dbConnect();
   const { couponCode, userEmail } = req.body;
 
   try {
@@ -63,6 +65,7 @@ const checkCoupon = async (req, res) => {
 };
 
 const getAllCoupons = async (req, res) => {
+  dbConnect();
   const { email, currPage } = req.query;
 
   // Validate required parameters
@@ -118,6 +121,7 @@ const getAllCoupons = async (req, res) => {
 };
 
 const deleteCoupon = async (req, res) => {
+  dbConnect();
   try {
     const { couponId } = req.params;
 
@@ -145,6 +149,7 @@ const deleteCoupon = async (req, res) => {
 };
 
 const updateCoupon = async (req, res) => {
+  dbConnect();
   try {
     const { couponId } = req.params;
     const { discountPercentage, expiryDate } = req.body;
@@ -178,6 +183,7 @@ const updateCoupon = async (req, res) => {
 };
 
 const createCoupon = async (req, res) => {
+  dbConnect();
   try {
     const { email, couponCode, discountPercentage, expiryDate } = req.body;
     if (!email || !couponCode || !discountPercentage) {
@@ -226,6 +232,7 @@ const createCoupon = async (req, res) => {
 };
 
 const getCouponStats = async (req, res) => {
+  dbConnect();
   try {
     const { email } = req.query;
     if (!email) {

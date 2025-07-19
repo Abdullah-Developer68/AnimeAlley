@@ -3,12 +3,14 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 const sendOTP = require("../utils/sendOTP.js");
+const dbConnect = require("../config/dbConnect.js");
 
 dotenv.config();
 
 const secretKey = process.env.JWT_KEY;
 
 const makNSenOTP = async (req, res) => {
+  dbConnect();
   const { email } = req.body;
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const otpExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 mins expiry
@@ -36,6 +38,7 @@ const makNSenOTP = async (req, res) => {
 };
 
 const verifyOTP = async (req, res) => {
+  dbConnect();
   const { email, otp } = req.body;
   const user = await userModel.findOne({ email, role: "verifying" });
   if (!user || user.otp !== otp || user.otpExpiry < new Date()) {
@@ -46,6 +49,7 @@ const verifyOTP = async (req, res) => {
 };
 
 const signUp = async (req, res) => {
+  dbConnect();
   try {
     const { email, password, username } = req.body;
     // Find user with role verifying
@@ -90,6 +94,7 @@ const signUp = async (req, res) => {
 };
 
 const login = async (req, res) => {
+  dbConnect();
   try {
     const { email, password } = req.body;
     // Check if user exists
@@ -145,6 +150,7 @@ const logout = (req, res) => {
 
 //  helps to stay logged in even after refreshing the page
 const verifyToken = async (req, res) => {
+  dbConnect();
   try {
     const token = req.cookies.token;
     if (!token) {

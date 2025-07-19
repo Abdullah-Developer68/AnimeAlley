@@ -1,8 +1,10 @@
 // server/controllers/reservation.controller.js
 const Reservation = require("../models/reservation.model.js");
 const Product = require("../models/product.model.js");
+const dbConnect = require("../config/dbConnect.js");
 
 const reserveStock = async (req, res) => {
+  dbConnect();
   try {
     const { cartId, productId, variant, quantity } = req.body;
     if (!cartId || !productId || !quantity) {
@@ -85,6 +87,7 @@ const reserveStock = async (req, res) => {
 };
 
 const releaseStock = async (req, res) => {
+  dbConnect();
   try {
     const { cartId, productId, variant, quantity } = req.body;
     if (!cartId || !productId || !quantity) {
@@ -149,6 +152,7 @@ const releaseStock = async (req, res) => {
 };
 
 const decrementReservationStock = async (req, res) => {
+  dbConnect();
   try {
     const { cartId, productId, variant, quantity } = req.body;
     if (!cartId || !productId || !quantity) {

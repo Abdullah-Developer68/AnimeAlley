@@ -3,8 +3,10 @@ const userModel = require("../models/user.model.js");
 const productModel = require("../models/product.model.js");
 const couponModel = require("../models/coupon.model.js");
 const Reservation = require("../models/reservation.model.js");
+const dbConnect = require("../config/dbConnect.js");
 
 const placeOrder = async (req, res) => {
+  dbConnect();
   try {
     const {
       cartItems, // not used for order, reservation is source of truth
@@ -156,6 +158,7 @@ const placeOrder = async (req, res) => {
 };
 
 const getOrderHistory = async (req, res) => {
+  dbConnect();
   const { email, currPage } = req.query;
 
   // Validate user email and current page
@@ -225,6 +228,7 @@ const getOrderHistory = async (req, res) => {
 };
 
 const allOrdersList = async (req, res) => {
+  dbConnect();
   const { email, currPage } = req.query;
 
   if (!email || !currPage) {
@@ -280,6 +284,7 @@ const allOrdersList = async (req, res) => {
 };
 
 const deleteOrder = async (req, res) => {
+  dbConnect();
   try {
     const { orderId } = req.params;
 
@@ -310,6 +315,7 @@ const deleteOrder = async (req, res) => {
 };
 
 const updateOrder = async (req, res) => {
+  dbConnect();
   try {
     const { orderId } = req.params;
     const { status } = req.body;
@@ -344,6 +350,7 @@ const updateOrder = async (req, res) => {
 
 // Controller to get order stats by status
 const getOrderStats = async (req, res) => {
+  dbConnect();
   try {
     const stats = await orderModel.aggregate([
       { $group: { _id: "$status", count: { $sum: 1 } } },
