@@ -122,17 +122,9 @@ const findProducts = async (req, res) => {
 const createProduct = async (req, res) => {
   dbConnect();
   try {
-    let imageFilename;
-    if (req.file) {
-      imageFilename = req.file.filename;
-    } else if (req.body.image) {
-      imageFilename = req.body.image;
-    } else {
-      return res.status(400).json({
-        success: false,
-        message: "Product image is required",
-      });
-    }
+    // Cloudinary returns the URL in req.file.path
+    const imageUrl = req.file ? req.file.path : null;
+
     if (
       !req.body.productID ||
       !req.body.name ||
@@ -152,7 +144,7 @@ const createProduct = async (req, res) => {
       price: parseFloat(req.body.price),
       category: req.body.category,
       description: req.body.description,
-      image: imageFilename,
+      image: imageUrl, // Store the Cloudinary URL
       stock: JSON.parse(req.body.stock),
     };
 

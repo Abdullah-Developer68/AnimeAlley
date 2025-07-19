@@ -1,4 +1,4 @@
-const passport = require("../config/passport.js");
+const passport = require("../config/passport/passport.js");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const dbConnect = require("../config/dbConnect.js");
