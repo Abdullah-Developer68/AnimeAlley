@@ -122,6 +122,8 @@ const findProducts = async (req, res) => {
 const createProduct = async (req, res) => {
   dbConnect();
   try {
+    // Debug: log the file object from multer/cloudinary
+    console.log("req.file:", req.file);
     // Cloudinary returns the URL in req.file.path
     const imageUrl = req.file ? req.file.path : null;
 
@@ -206,11 +208,13 @@ const createProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
   dbConnect();
   try {
-    let imageFilename;
+    let imageUrl;
     if (req.file) {
-      imageFilename = req.file.filename;
+      // Use Cloudinary URL if a new image is uploaded
+      imageUrl = req.file.path;
     } else if (req.body.image) {
-      imageFilename = req.body.image;
+      // Use the existing image URL if not
+      imageUrl = req.body.image;
     } else {
       return res.status(400).json({
         success: false,
@@ -236,7 +240,7 @@ const updateProduct = async (req, res) => {
       price: parseFloat(req.body.price),
       category: req.body.category,
       description: req.body.description,
-      image: imageFilename,
+      image: imageUrl,
       stock: JSON.parse(req.body.stock),
     };
 
@@ -277,7 +281,7 @@ const updateProduct = async (req, res) => {
       }
     }
 
-    console.log("Creating product with data:", productData);
+    console.log("Updating product with data:", productData);
 
     const updatedProduct = await productModel.findOneAndUpdate(
       { productID: productData.productID },
@@ -285,13 +289,13 @@ const updateProduct = async (req, res) => {
       { new: true }
     );
 
-    res.status(201).json({
+    res.status(200).json({
       success: true,
-      message: "Product created successfully",
+      message: "Product updated successfully",
       product: updatedProduct,
     });
   } catch (error) {
-    console.error("Error creating product:", error);
+    console.error("Error updating product:", error);
     res.status(500).json({
       success: false,
       message: error.message || "Internal Server Error",

@@ -106,7 +106,12 @@ const ProductForm = () => {
       }
       // Always set preview to product image in edit mode
       if (editProduct.image) {
-        setPreviewImage(baseUrl + "/" + editProduct.image);
+        // If the image is already a full URL (Cloudinary), use as is
+        if (editProduct.image.startsWith("http")) {
+          setPreviewImage(editProduct.image);
+        } else {
+          setPreviewImage(baseUrl + "/" + editProduct.image);
+        }
       }
       setSelectedFile(null); // clear file selection in edit mode
     }
