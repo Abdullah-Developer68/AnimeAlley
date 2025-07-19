@@ -2,7 +2,6 @@ import assets from "../../assets/asset";
 import { useDispatch } from "react-redux";
 import { transferProductData } from "../../redux/Slice/shopSlice";
 import { Link } from "react-router-dom";
-import config from "../../config/config";
 
 /* eslint-disable react/prop-types */
 const Cards = ({ product }) => {
@@ -12,8 +11,8 @@ const Cards = ({ product }) => {
     dispatch(transferProductData(product));
   };
 
-  // Construct the complete image URL using config
-  const imageUrl = `${config.apiBaseUrl}${config.uploadsPath}/${product.image}`;
+  // Use the image URL directly (Cloudinary or local)
+  const imageUrl = product.image;
 
   return (
     <div

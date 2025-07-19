@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import api from "../api/api";
 import assets from "../assets/asset.js";
 import { useNavigate } from "react-router-dom";
-import config from "../config/config";
 import { toast } from "react-toastify";
 
 const UserHistory = () => {
@@ -235,12 +234,7 @@ const UserHistory = () => {
                     className="p-3 flex items-center gap-3 hover:bg-white/5"
                   >
                     <img
-                      src={
-                        product.productId.image &&
-                        product.productId.image.startsWith("http")
-                          ? product.productId.image
-                          : `${config.apiBaseUrl}${config.uploadsPath}/${product.productId.image}`
-                      }
+                      src={product.productId.image}
                       alt={product.productId.name}
                       className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
                     />
