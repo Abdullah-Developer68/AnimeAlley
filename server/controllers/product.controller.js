@@ -1,7 +1,9 @@
 const productModel = require("../models/product.model.js");
+const dbConnect = require("../config/dbConnect.js");
 
 const getProducts = async (req, res) => {
   try {
+    dbConnect();
     // Destructure the productConstraints from the request query
     const { productConstraints } = req.query;
     const constraints = JSON.parse(productConstraints);
@@ -82,7 +84,7 @@ const getProducts = async (req, res) => {
     console.error("Error while fetching products:", error.message);
     res.status(500).json({
       success: false,
-      message: "Internal Server Error",
+      message: "Internal Server Error mongodb can not connect!",
       error: error.message,
     });
   }

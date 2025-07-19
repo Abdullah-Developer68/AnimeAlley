@@ -63,7 +63,6 @@ const checkCoupon = async (req, res) => {
 };
 
 const getAllCoupons = async (req, res) => {
-  // Extract email and current page from query parameters for authorization and pagination
   const { email, currPage } = req.query;
 
   // Validate required parameters
