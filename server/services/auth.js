@@ -72,7 +72,13 @@ const signUp = async (req, res) => {
     await user.save();
     // Create token and sign in
     const token = jwt.sign({ userid: user._id, email }, secretKey);
-    res.cookie("token", token);
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production", // true on Vercel
+      sameSite: "lax", // or 'none' if cross-site, but then secure must be true
+      path: "/",
+      // domain: '.your-app.vercel.app', // set if using custom domain or subdomain
+    });
     res.status(201).json({
       success: true,
       user: {
