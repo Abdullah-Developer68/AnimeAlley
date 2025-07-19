@@ -1,5 +1,5 @@
 const multer = require("multer");
-const storage = require("../../config/cloudinaryMulter");
+const storage = require("../../config/cloudinary/cloudinary.multer.js");
 
 const upload = multer({ storage }); // this is using cloud storage
 

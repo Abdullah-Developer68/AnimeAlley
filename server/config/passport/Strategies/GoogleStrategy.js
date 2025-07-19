@@ -1,5 +1,5 @@
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const User = require("../../models/user.model.js");
+const User = require("../../../models/user.model");
 require("dotenv").config();
 
 const findOrCreateUser = async (profile) => {

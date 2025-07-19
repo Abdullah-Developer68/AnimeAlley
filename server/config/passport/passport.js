@@ -1,6 +1,6 @@
 const passport = require("passport");
 const GoogleProvider = require("./Strategies/GoogleStrategy.js");
-const userModel = require("../models/user.model.js");
+const userModel = require("../../models/user.model.js");
 
 // console.log("Configuring Passport");
 
