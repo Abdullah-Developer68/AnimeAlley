@@ -4,7 +4,6 @@ import { useDispatch, useSelector } from "react-redux";
 import useAuth from "../../../../Hooks/UseAuth";
 import api from "../../../../api/api";
 import assets from "../../../../assets/asset";
-import config from "../../../../config/config";
 
 import {
   openExportModal,
@@ -243,7 +242,7 @@ const Users = () => {
                               src={
                                 u.profilePic.startsWith("http")
                                   ? u.profilePic
-                                  : `${config.apiBaseUrl}/uploads/${u.profilePic}`
+                                  : `$${u.profilePic}`
                               }
                               alt={u.username}
                               className="w-10 h-10 object-cover rounded-full"
