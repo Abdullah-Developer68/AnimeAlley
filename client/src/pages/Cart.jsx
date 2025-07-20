@@ -16,7 +16,6 @@ import StripeButton from "../components/Cart/StripeButton";
 import { useState, useEffect } from "react";
 import api from "../api/api";
 import { toast } from "react-toastify";
-import config from "../config/config";
 
 const Cart = () => {
   // Redux setup
@@ -27,7 +26,7 @@ const Cart = () => {
   const finalCost = useSelector((state) => state.cart.finalCost);
 
   // Constants
-  const SHIPPING_COST = 99;
+  const SHIPPING_COST = 5;
 
   // State management
   const [deliveryAddress, setDeliveryAddress] = useState(
@@ -297,7 +296,7 @@ const Cart = () => {
                     {/* Image Section */}
                     <div className="shrink-0 mx-auto sm:mx-0">
                       <img
-                        src={`${config.apiBaseUrl}${config.uploadsPath}/${item.image}`}
+                        src={`${item.image}`}
                         alt={item.name}
                         className="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-lg shadow-lg hover:scale-105 transition-transform duration-300"
                       />

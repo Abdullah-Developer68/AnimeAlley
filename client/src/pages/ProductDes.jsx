@@ -5,7 +5,6 @@ import { addToCartAsync } from "../redux/Slice/cartThunks";
 import { Link } from "react-router-dom";
 import api from "../api/api";
 import assets from "../assets/asset";
-import config from "../config/config";
 import { toast } from "react-toastify";
 
 const ProductDescription = () => {
@@ -178,7 +177,7 @@ const ProductDescription = () => {
           <div className="rounded-2xl overflow-hidden border border-purple-500/20 shadow-xl shadow-purple-500/5 bg-white/5 backdrop-blur-sm p-6">
             <div className="aspect-[4/3]">
               <img
-                src={`${config.apiBaseUrl}${config.uploadsPath}/${selectedProduct.image}`}
+                src={`${selectedProduct.image}`}
                 alt={selectedProduct.name}
                 className="w-full h-full object-contain hover:scale-105 transition-transform duration-500"
               />
