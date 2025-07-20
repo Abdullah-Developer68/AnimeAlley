@@ -23,107 +23,59 @@ const Home = () => {
   // Reset loading state when component mounts
   useEffect(() => {
     dispatch(resetLoadingState());
+
+    // Simple sequential loading - mark components as loaded in order
+    const loadingSequence = [
+      { component: "banner", delay: 300 },
+      { component: "comics", delay: 600 },
+      { component: "clothes", delay: 900 },
+      { component: "actionFigures", delay: 1200 },
+    ];
+
+    loadingSequence.forEach(({ component, delay }) => {
+      setTimeout(() => {
+        dispatch(markComponentLoaded(component));
+      }, delay);
+    });
   }, [dispatch]);
 
+  // Fallback mechanism to ensure loading never gets stuck
   useEffect(() => {
-    const observerCallback = (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          // Determine which component was loaded based on the ref
-          let componentName = "";
-          if (entry.target === bannerRef.current) componentName = "banner";
-          else if (entry.target === comicsRef.current) componentName = "comics";
-          else if (entry.target === clothesRef.current)
-            componentName = "clothes";
-          else if (entry.target === actionFiguresRef.current)
-            componentName = "actionFigures";
-
-          if (componentName && !componentLoadStatus[componentName]) {
-            // Wait a bit for component to fully render and images to load
-            setTimeout(() => {
-              dispatch(markComponentLoaded(componentName));
-            }, 100);
+    const fallbackTimer = setTimeout(() => {
+      // Force completion after 2 seconds if still loading
+      if (isLoading) {
+        const components = ["banner", "comics", "clothes", "actionFigures"];
+        components.forEach((component) => {
+          if (!componentLoadStatus[component]) {
+            dispatch(markComponentLoaded(component));
           }
-          observer.unobserve(entry.target);
-        }
-      });
-    };
+        });
+      }
+    }, 2000);
 
-    const observer = new IntersectionObserver(observerCallback, {
-      threshold: 0.1,
-      rootMargin: "50px",
-    });
-
-    // Wait for DOM to be ready then start observing
-    const startObserving = () => {
-      const refs = [bannerRef, comicsRef, clothesRef, actionFiguresRef];
-
-      refs.forEach((ref) => {
-        if (ref.current) {
-          observer.observe(ref.current);
-        }
-      });
-    };
-
-    // Start observing after a short delay to ensure components are mounted
-    const timer = setTimeout(startObserving, 100);
-
-    return () => {
-      clearTimeout(timer);
-      observer.disconnect();
-    };
-  }, [dispatch, componentLoadStatus]);
-
-  // Also detect when all images in the page are loaded
-  useEffect(() => {
-    const handleImagesLoad = () => {
-      const images = document.querySelectorAll("img");
-      let loadedImages = 0;
-
-      const checkAllImagesLoaded = () => {
-        loadedImages++;
-        if (loadedImages === images.length && images.length > 0) {
-          // Extra boost to progress when all images are loaded
-          if (!componentLoadStatus.banner) {
-            setTimeout(() => dispatch(markComponentLoaded("banner")), 200);
-          }
-        }
-      };
-
-      images.forEach((img) => {
-        if (img.complete) {
-          checkAllImagesLoaded();
-        } else {
-          img.addEventListener("load", checkAllImagesLoaded);
-          img.addEventListener("error", checkAllImagesLoaded); // Count failed images too
-        }
-      });
-    };
-
-    // Check images after components mount
-    setTimeout(handleImagesLoad, 500);
-  }, [dispatch, componentLoadStatus.banner]);
+    return () => clearTimeout(fallbackTimer);
+  }, [isLoading, componentLoadStatus, dispatch]);
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
+      <div className="fixed inset-0 bg-gray-900 z-50 flex flex-col items-center justify-center">
         <div className="w-80 max-w-md">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+          <h2 className="text-2xl font-bold text-white mb-6 text-center">
             Loading Anime Alley...
           </h2>
 
-          <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
+          <div className="w-full bg-gray-700 rounded-full h-3 mb-4">
             <div
-              className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 h-3 rounded-full transition-all duration-500 ease-out"
+              className="bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 h-3 rounded-full transition-all duration-500 ease-out shadow-lg"
               style={{ width: `${loadingProgress}%` }}
             />
           </div>
 
-          <div className="text-center text-gray-600 font-medium">
+          <div className="text-center text-gray-100 font-medium">
             {loadingProgress}%
           </div>
 
-          <div className="text-center text-gray-500 text-sm mt-2">
+          <div className="text-center text-gray-400 text-sm mt-2">
             {loadingProgress < 25 && "Loading banner..."}
             {loadingProgress >= 25 &&
               loadingProgress < 50 &&
