@@ -53,9 +53,7 @@ const createCheckoutSession = async (req, res) => {
           currency: "usd",
           product_data: {
             name: item.productId.name,
-            images: [
-              `${process.env.SERVER_URL}/uploads/${item.productId.image}`,
-            ],
+            images: [`${item.productId.image}`],
             // images: [
             //   "https://images.unsplash.com/photo-1519125323398-675f0ddb6308",
             // ],
@@ -88,8 +86,8 @@ const createCheckoutSession = async (req, res) => {
       payment_method_types: ["card"],
       mode: "payment",
       line_items: lineItems,
-      success_url: "http://localhost:5173/success",
-      cancel_url: "http://localhost:5173/cart",
+      success_url: `${process.env.CLIENT_URL}/success`,
+      cancel_url: `${process.env.CLIENT_URL}/cart`,
       metadata: {
         cartId: cartId,
         couponCode: couponCode || "",

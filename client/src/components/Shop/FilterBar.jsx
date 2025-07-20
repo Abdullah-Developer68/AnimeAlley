@@ -200,23 +200,23 @@ const FilterBar = () => {
             <span className="w-1 h-4 bg-yellow-500 rounded-full"></span>
             Available Filters
           </h3>
-          <div className="space-y-3 text-white/70">
+          <div className="grid grid-cols-2 gap-3 text-white/70">
             {availProductTypes.map((filter) => (
               <label
                 key={filter}
-                className="flex items-center gap-3 hover:text-yellow-500 cursor-pointer text-sm transition-colors duration-200 group"
+                className="flex items-center gap-2 hover:text-yellow-500 cursor-pointer text-sm transition-colors duration-200 group"
               >
                 <input
                   type="checkbox"
                   value={filter}
                   checked={watch("productTypes")?.includes(filter)}
                   {...register("productTypes")}
-                  className="accent-yellow-500 w-4 h-4 border-white/20 focus:ring-yellow-500 focus:ring-offset-1 focus:ring-offset-black cursor-pointer"
+                  className="accent-yellow-500 w-4 h-4 border-white/20 focus:ring-yellow-500 focus:ring-offset-1 focus:ring-offset-black cursor-pointer flex-shrink-0"
                   onClick={() => {
                     updateCurrProductType(filter);
                   }}
                 />
-                <span className="group-hover:translate-x-1 transition-transform duration-200">
+                <span className="group-hover:translate-x-1 transition-transform duration-200 text-xs">
                   {filter}
                 </span>
               </label>
