@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import api from "../../../../api/api";
-import config from "../../../../config/config";
 import {
   closeProductForm,
   setReloadData,
@@ -12,9 +11,6 @@ import assets from "../../../../assets/asset";
 import { toast } from "react-toastify";
 
 const ProductForm = () => {
-  // base URL for images from server
-  const baseUrl = `${config.apiBaseUrl}${config.uploadsPath}`;
-
   // State for image preview and file handling
   const [previewImage, setPreviewImage] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -110,14 +106,14 @@ const ProductForm = () => {
         if (editProduct.image.startsWith("http")) {
           setPreviewImage(editProduct.image);
         } else {
-          setPreviewImage(baseUrl + "/" + editProduct.image);
+          setPreviewImage(editProduct.image);
         }
       }
       setSelectedFile(null); // clear file selection in edit mode
     }
     // In add mode, do NOT reset previewImage or selectedFile here!
     // Let the user's selection persist.
-  }, [editProduct, baseUrl]);
+  }, [editProduct]);
 
   /**
    * Handles image file selection and preview
@@ -135,7 +131,7 @@ const ProductForm = () => {
       // If no file selected, reset to edit image if in edit mode
       setSelectedFile(null);
       if (editProduct && editProduct.image) {
-        setPreviewImage(baseUrl + "/" + editProduct.image);
+        setPreviewImage(editProduct.image);
       } else {
         setPreviewImage(null);
       }
