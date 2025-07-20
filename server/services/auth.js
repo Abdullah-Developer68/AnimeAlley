@@ -27,11 +27,12 @@ const makNSenOTP = async (req, res) => {
       password: "N/A",
     });
   } else {
-    // If user exists, update only otp, otpExpiry, and role if not already verifying
-    user.otp = otp;
-    user.otpExpiry = otpExpiry;
-    user.role = "verifying";
-    await user.save();
+    // If user exists
+    res
+      .status(409)
+      .json({
+        message: "Your account already exists, so you should just login!",
+      });
   }
   await sendOTP(email, otp);
   res.status(200).json({ message: "OTP sent" });
