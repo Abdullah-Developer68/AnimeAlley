@@ -53,13 +53,17 @@ const handleGoogleCallback = (req, res, next) => {
         },
         process.env.JWT_KEY
       );
+      console.log("Setting JWT token for Google auth user:", req.user.email);
       // Set the token in a cookie
       res.cookie("token", token, {
         httpOnly: true,
-        secure: true,
-        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production", // true on Vercel
+        sameSite: "none", // or 'none' if cross-site, but then secure must be true
+        path: "/",
         maxAge: 24 * 60 * 60 * 1000,
+        // domain: '.your-app.vercel.app', // set if using custom domain or subdomain
       });
+      console.log("Redirecting to client URL after successful Google auth");
       return res.redirect(`${process.env.CLIENT_URL}/`);
     }
     res.redirect(`${process.env.CLIENT_URL}/login`);
@@ -102,14 +106,21 @@ const LogoutFromGoogle = async (req, res) => {
  * Provides authenticated user information to the client.
  *
  * Process:
- * 1. Verifies user authentication
- * 2. Sends user profile if authenticated
- * 3. Handles error cases appropriately
+ * 1. First checks for session-based authentication (req.isAuthenticated())
+ * 2. If no session, checks for JWT token in cookies
+ * 3. Sends user profile if authenticated via either method
+ * 4. Handles error cases appropriately
  */
 const sendUserData = async (req, res) => {
   dbConnect();
   try {
+    console.log("sendUserData called - checking authentication");
+    console.log("Session authenticated:", req.isAuthenticated());
+    console.log("Has JWT token:", !!req.cookies.token);
+
+    // First check session-based authentication (Google OAuth)
     if (req.isAuthenticated() && req.user) {
+      console.log("User authenticated via session:", req.user.email);
       res.status(200).json({
         success: true,
         user: {
@@ -120,12 +131,44 @@ const sendUserData = async (req, res) => {
           role: req.user.role,
         },
       });
-    } else {
-      res.status(200).json({
-        success: false,
-        message: "Not authenticated",
-      });
+      return;
     }
+
+    // If no session, check for JWT token (for users who logged in via Google and got JWT)
+    const token = req.cookies.token;
+    if (token) {
+      try {
+        console.log("Verifying JWT token for Google auth user");
+        const decoded = jwt.verify(token, process.env.JWT_KEY);
+        const user = await require("../models/user.model.js").findById(
+          decoded.userid
+        );
+
+        if (user) {
+          console.log("User authenticated via JWT token:", user.email);
+          res.status(200).json({
+            success: true,
+            user: {
+              id: user._id,
+              username: user.username,
+              email: user.email,
+              profilePic: user.profilePic,
+              role: user.role,
+            },
+          });
+          return;
+        }
+      } catch (jwtError) {
+        console.error("JWT verification error in sendUserData:", jwtError);
+      }
+    }
+
+    // No authentication found
+    console.log("No authentication found in sendUserData");
+    res.status(200).json({
+      success: false,
+      message: "Not authenticated",
+    });
   } catch (error) {
     console.error("Error in sendUserData:", error);
     res.status(500).json({

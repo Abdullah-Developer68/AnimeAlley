@@ -6,10 +6,10 @@ const expSession = session({
   resave: false, // Save session only when modified
   saveUninitialized: false, // Don't save empty sessions
   cookie: {
-    secure: false, // Set to true in production with HTTPS
+    secure: process.env.NODE_ENV === "production", // Set to true in production with HTTPS
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 1 day
-    sameSite: "lax", // Helps prevent CSRF attacks
+    sameSite: "none", // Consistent with auth cookies
     // domain: "localhost", // Set to your domain in production
   },
   name: "session-id",
