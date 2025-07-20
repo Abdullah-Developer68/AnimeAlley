@@ -11,11 +11,10 @@ import api from "../../../../api/api";
 import assets from "../../../../assets/asset";
 import ProductForm from "./ProductForm";
 import DeleteProduct from "./DeleteProduct";
-import config from "../../../../config/config";
 
 const ProductCatalog = () => {
   // base URL for images from server
-  const imgUrl = `${config.apiBaseUrl}${config.uploadsPath}`;
+
   // react hook form setup
   const { register, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
