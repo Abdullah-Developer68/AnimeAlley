@@ -40,4 +40,9 @@ const GoogleProvider = new GoogleStrategy(
   }
 );
 
+console.log(
+  "[Google OAuth] Using callbackURL:",
+  process.env.GOOGLE_CALLBACK_URL
+);
+
 module.exports = GoogleProvider;
