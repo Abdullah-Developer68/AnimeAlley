@@ -61,9 +61,9 @@ const Navbar = () => {
               <Logout />
             </div>
           ) : (
-            <Link to="/signup">
+            <Link to="/login">
               <button className="px-3 py-1.5 md:px-4 md:py-2 rounded-lg bg-pink-500 text-black font-medium hover:shadow-lg text-sm md:text-base cursor-pointer">
-                Sign Up
+                Login
               </button>
             </Link>
           )}
