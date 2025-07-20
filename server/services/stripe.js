@@ -91,6 +91,7 @@ const createCheckoutSession = async (req, res) => {
       metadata: {
         cartId: cartId,
         couponCode: couponCode || "",
+        userEmail: userEmail || "",
         discountAmount: discountAmount || "0",
         originalTotal: originalTotal || calculatedSubtotal.toFixed(2),
         finalTotal: finalTotal || calculatedSubtotal.toFixed(2),
