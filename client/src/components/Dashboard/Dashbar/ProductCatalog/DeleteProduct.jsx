@@ -5,7 +5,6 @@ import {
   setReloadData,
 } from "../../../../redux/Slice/DashboardSlice";
 import api from "../../../../api/api";
-import config from "../../../../config/config";
 import { toast } from "react-toastify";
 
 const DeleteProduct = () => {
@@ -16,9 +15,6 @@ const DeleteProduct = () => {
   const [productId, setProductId] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState("");
-
-  // Base URL for images from server
-  const imgUrl = `${config.apiBaseUrl}${config.uploadsPath}`;
 
   const handleDelete = async () => {
     if (!productId.trim()) {
@@ -102,7 +98,7 @@ const DeleteProduct = () => {
           </h3>
           <div className="flex items-center gap-3">
             <img
-              src={`${imgUrl}/${selectedProduct.image}`}
+              src={`${selectedProduct.image}`}
               alt={selectedProduct.name}
               className="w-12 h-12 rounded-lg object-cover bg-white/5"
             />
