@@ -121,7 +121,13 @@ const UserHistory = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
-        <div className="text-white">Loading...</div>
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-gray-600 border-t-pink-500 rounded-full animate-spin"></div>
+          <div
+            className="absolute inset-0 w-16 h-16 border-4 border-transparent border-r-purple-500 rounded-full animate-spin"
+            style={{ animationDirection: "reverse", animationDuration: "1.5s" }}
+          ></div>
+        </div>
       </div>
     );
   }

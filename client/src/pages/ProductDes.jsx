@@ -1,73 +1,52 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-// import { addToCart } from "../redux/Slice/cartSlice";
-import { addToCartAsync } from "../redux/Slice/cartThunks";
 import { Link } from "react-router-dom";
-import api from "../api/api";
-import assets from "../assets/asset";
 import { toast } from "react-toastify";
+import { assets } from "../assets/assets";
+import { addToCartAsync } from "../redux/Slice/cartThunks";
 
 const ProductDescription = () => {
   const dispatch = useDispatch();
 
   // Get product data from Redux store
   const selectedProduct = useSelector((state) => state.shop.productData);
+  const cartId = useSelector((state) => state.cart.cartId);
 
   // States for managing product variants and selections
   const [variantOptions, setVariantOptions] = useState([]);
   const [variantLabel, setVariantLabel] = useState("");
   const [selectedVariant, setSelectedVariant] = useState("");
   const [itemQuantity, setItemQuantity] = useState(1);
-  const [stockStatus, setStockStatus] = useState({});
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   const totalPrice = itemQuantity * selectedProduct.price;
 
-  // Set up variant options based on product category
+  // Initialize variant options based on product category
   useEffect(() => {
     if (selectedProduct.category === "comics") {
       setVariantOptions(selectedProduct.volumes || []);
-      setVariantLabel("Select the volume:");
-      // Initialize stock status for all volumes
-      const initialStockStatus = {};
-      selectedProduct.volumes?.forEach((volume) => {
-        initialStockStatus[volume] = {
-          stockAvailable: selectedProduct.stock[volume] || 0,
-          isAvailable: (selectedProduct.stock[volume] || 0) > 0,
-        };
-      });
-      setStockStatus(initialStockStatus);
+      setVariantLabel("Volume");
+      setSelectedVariant(selectedProduct.volumes?.[0] || "");
     } else if (
       selectedProduct.category === "clothes" ||
       selectedProduct.category === "shoes"
     ) {
       setVariantOptions(selectedProduct.sizes || []);
-      setVariantLabel("Select the size:");
-      // Initialize stock status for all sizes
-      const initialStockStatus = {};
-      selectedProduct.sizes?.forEach((size) => {
-        initialStockStatus[size] = {
-          stockAvailable: selectedProduct.stock[size] || 0,
-          isAvailable: (selectedProduct.stock[size] || 0) > 0,
-        };
-      });
-      setStockStatus(initialStockStatus);
+      setVariantLabel("Size");
+      setSelectedVariant(selectedProduct.sizes?.[0] || "");
+    } else {
+      setVariantOptions([]);
+      setVariantLabel("");
+      setSelectedVariant("");
     }
   }, [selectedProduct]);
 
-  // for quantity changes
+  const variantSelect = (variant) => {
+    setSelectedVariant(variant);
+  };
+
   const increaseQuantity = () => {
-    if (
-      selectedVariant &&
-      stockStatus[selectedVariant]?.stockAvailable > itemQuantity
-    ) {
-      setItemQuantity((prev) => prev + 1);
-    } else {
-      toast.error(
-        `Only ${
-          stockStatus[selectedVariant]?.stockAvailable || 0
-        } items available`
-      );
-    }
+    setItemQuantity((prev) => prev + 1);
   };
 
   const decreaseQuantity = () => {
@@ -76,88 +55,70 @@ const ProductDescription = () => {
     }
   };
 
-  //  variant selection
-  const variantSelect = (variant) => {
-    if (stockStatus[variant]?.stockAvailable > 0) {
-      setSelectedVariant(variant);
-      setItemQuantity(1);
-    } else {
-      toast.error("This variant is out of stock");
+  const handleAddToCart = async () => {
+    if (!selectedProduct) {
+      toast.error("Product not found");
+      return;
     }
-  };
 
-  const checkStock = async (selectedVariant, itemQuantity) => {
+    // Validate variant selection for products that require variants
+    if (
+      (selectedProduct.category === "comics" ||
+        selectedProduct.category === "clothes" ||
+        selectedProduct.category === "shoes") &&
+      !selectedVariant
+    ) {
+      toast.error(`Please select a ${variantLabel.toLowerCase()}`);
+      return;
+    }
+
+    setIsAddingToCart(true);
+
     try {
-      const res = await api.verifyStock(
-        selectedProduct.name,
-        selectedVariant,
-        itemQuantity
+      const resultAction = await dispatch(
+        addToCartAsync({
+          cartId,
+          productId: selectedProduct._id,
+          variant: selectedVariant,
+          requestedQuantity: itemQuantity,
+          productData: selectedProduct,
+        })
       );
-      if (res.data.success) {
-        setStockStatus((prev) => ({
-          ...prev,
-          [selectedVariant]: {
-            stockAvailable: res.data.stockAvailable,
-            isAvailable: res.data.isAvailable,
-          },
-        }));
 
-        if (!res.data.isAvailable) {
-          toast.error(res.data.message);
-          setItemQuantity(Math.min(itemQuantity, res.data.stockAvailable));
-        }
+      if (addToCartAsync.fulfilled.match(resultAction)) {
+        toast.success(resultAction.payload.message);
+        // Reset quantity after successful addition
+        setItemQuantity(1);
+      } else {
+        // Error handling is done in the thunk
       }
     } catch (error) {
-      console.error("Error checking stock:", error);
+      toast.error("Failed to add item to cart");
+      console.log(error);
+    } finally {
+      setIsAddingToCart(false);
     }
   };
 
-  useEffect(() => {
-    if (selectedProduct.name && selectedVariant) {
-      checkStock(selectedVariant, itemQuantity);
-    }
-  }, [selectedProduct.name, selectedVariant, itemQuantity]);
-
-  //  add to cart
-  const handleAddToCart = () => {
-    // Validate selections before adding to cart
-    if (!selectedVariant && variantOptions.length > 0) {
-      toast.error("Please select a variant");
-      return;
-    }
-
-    if (!stockStatus[selectedVariant]?.isAvailable) {
-      toast.error(
-        `Only ${
-          stockStatus[selectedVariant]?.stockAvailable || 0
-        } items available`
-      );
-      return;
-    }
-
-    dispatch(
-      addToCartAsync({
-        product: selectedProduct,
-        variant: selectedVariant,
-        quantity: itemQuantity,
-      })
-    )
-      .unwrap()
-      .then(() => {
-        toast.success("Added to cart successfully!");
-      })
-      .catch((err) => {
-        toast.error(err);
-      });
-  };
+  if (!selectedProduct) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#0b0133] to-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Product not found</h2>
+          <Link to="/shop" className="text-pink-500 hover:underline">
+            Return to Shop
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0b0133] to-black text-white">
-      {/* Back Navigation */}
+      {/* Navigation Header */}
       <Link to="/shop">
         <div className="fixed top-16 w-full z-50 bg-black/50 backdrop-blur-md border-b border-white/10">
           <div className="container mx-auto px-4 py-3">
-            {/* Back button */}
             <button className="flex items-center gap-2 text-white/70 hover:text-pink-500 transition-colors cursor-pointer">
               <img
                 src={assets.prevBtn}
@@ -173,11 +134,11 @@ const ProductDescription = () => {
       <div className="container mx-auto px-4 pt-28 pb-24">
         {/* Product Details */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
-          {/* Image Section - Modified height */}
+          {/* Image Section */}
           <div className="rounded-2xl overflow-hidden border border-purple-500/20 shadow-xl shadow-purple-500/5 bg-white/5 backdrop-blur-sm p-6">
             <div className="aspect-[4/3]">
               <img
-                src={`${selectedProduct.image}`}
+                src={selectedProduct.image}
                 alt={selectedProduct.name}
                 className="w-full h-full object-contain hover:scale-105 transition-transform duration-500"
               />
@@ -195,12 +156,13 @@ const ProductDescription = () => {
                 <span className="px-4 py-1.5 bg-pink-500 text-black text-sm font-medium rounded-full">
                   {selectedProduct.category}
                 </span>
+                {selectedProduct.genres &&
+                  Array.isArray(selectedProduct.genres) && (
+                    <span className="px-4 py-1.5 bg-pink-500 text-black text-sm font-medium rounded-full">
+                      {selectedProduct.genres.join(", ")}
+                    </span>
+                  )}
               </div>
-              <span className="px-4 py-1.5 bg-pink-500 text-black text-sm font-medium rounded-full">
-                {Array.isArray(selectedProduct.genres)
-                  ? selectedProduct.genres.join(", ")
-                  : ""}
-              </span>
             </div>
 
             {/* Description */}
@@ -208,39 +170,37 @@ const ProductDescription = () => {
               {selectedProduct.description}
             </p>
 
-            {/* Size/Volume Selection */}
-            <div className="space-y-4">
-              <h3 className="text-white/90 font-medium">{variantLabel}</h3>
-              <div className="flex flex-wrap gap-3">
-                {variantOptions.map((variant) => (
-                  <button
-                    key={variant}
-                    onClick={() => variantSelect(variant)}
-                    className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-300 cursor-pointer
-                      ${
-                        selectedVariant === variant
-                          ? "bg-yellow-500 text-black"
-                          : stockStatus[variant]?.stockAvailable > 0
-                          ? "bg-white/10 text-white/70 hover:bg-white/20"
-                          : "bg-red-500/20 text-red-500/70 cursor-not-allowed"
-                      }`}
-                    disabled={stockStatus[variant]?.stockAvailable === 0}
-                  >
-                    {variant}
-                    {stockStatus[variant]?.stockAvailable === 0 &&
-                      " (Out of Stock)"}
-                  </button>
-                ))}
+            {/* Variant Selection */}
+            {variantOptions.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-white/90 font-medium">{variantLabel}</h3>
+                <div className="flex flex-wrap gap-3">
+                  {variantOptions.map((variant) => (
+                    <button
+                      key={variant}
+                      onClick={() => variantSelect(variant)}
+                      className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-300 cursor-pointer
+                        ${
+                          selectedVariant === variant
+                            ? "bg-yellow-500 text-black"
+                            : "bg-white/10 text-white/70 hover:bg-white/20"
+                        }`}
+                    >
+                      {variant}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Quantity */}
+            {/* Quantity Selection */}
             <div className="space-y-4">
               <h3 className="text-white/90 font-medium">Quantity</h3>
               <div className="flex items-center gap-4">
                 <button
                   onClick={decreaseQuantity}
-                  className="w-12 h-12 rounded-lg bg-white/10 text-white hover:bg-pink-500/20 transition-colors cursor-pointer"
+                  disabled={itemQuantity <= 1}
+                  className="w-12 h-12 rounded-lg bg-white/10 text-white hover:bg-pink-500/20 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   -
                 </button>
@@ -256,7 +216,7 @@ const ProductDescription = () => {
               </div>
             </div>
 
-            {/* Price and Cart */}
+            {/* Price and Add to Cart */}
             <div className="flex items-center justify-between pt-8 border-t border-white/10">
               <div>
                 <p className="text-white/60">Total Price</p>
@@ -264,9 +224,10 @@ const ProductDescription = () => {
               </div>
               <button
                 onClick={handleAddToCart}
-                className="px-8 py-4 bg-pink-500 text-black rounded-xl font-medium hover:shadow-xl hover:shadow-pink-500/20 transition-all duration-300 cursor-pointer"
+                disabled={isAddingToCart}
+                className="px-8 py-4 bg-pink-500 text-black rounded-xl font-medium hover:shadow-xl hover:shadow-pink-500/20 transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Add to Cart
+                {isAddingToCart ? "Adding..." : "Add to Cart"}
               </button>
             </div>
           </div>

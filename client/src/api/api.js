@@ -1,223 +1,73 @@
 import axios from "axios";
 
-// axios automatically sets the headers content type for api requests
-const serverURL = import.meta.env.VITE_API_BASE_URL;
 const api = axios.create({
-  baseURL: `${serverURL}/api`,
-  withCredentials: true, // tells the browser to send cookies, authorization headers or TLS client certificates when making a CORS.
+  baseURL: "http://localhost:8000/api",
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-// --- AUTH API'S ---
+// Auth endpoints
+export const login = (userData) => api.post("/auth/login", userData);
+export const signup = (userData) => api.post("/auth/signup", userData);
+export const logout = () => api.post("/auth/logout");
 
-// GOOGLE AUTH
-api.googleLogin = () => {
-  window.location.href = `${serverURL}/api/googleAuth/login`;
-};
-api.googleLogout = () => {
-  window.location.href = `${serverURL}/api/googleAuth/logout`;
-};
-// LOCAL AUTH
-api.verifyAuth = () => {
-  return api.get("/auth/verify");
-};
-api.logout = () => {
-  api.get("/auth/logout");
-};
+// Product endpoints
+export const getProducts = () => api.get("/product/getProducts");
+export const findProducts = (searchQuery) =>
+  api.get(`/product/findProducts?searchQuery=${searchQuery}`);
+export const createProduct = (productData) =>
+  api.post("/product/createProduct", productData);
+export const verifyStock = (stockData) =>
+  api.post("/product/verifyStock", stockData);
+export const updateProduct = (productData) =>
+  api.put("/product/updateProduct", productData);
+export const deleteProduct = (productId) =>
+  api.delete(`/product/deleteProduct/${productId}`);
 
-// --- PRODUCT API'S ---
+// Reservation endpoints (Updated with verification)
+export const reserveStock = (reservationData) =>
+  api.post("/reservation/reserveStock", reservationData);
+export const releaseStock = (releaseData) =>
+  api.post("/reservation/releaseStock", releaseData);
+export const decrementReservationStock = (decrementData) =>
+  api.post("/reservation/decrementReservationStock", decrementData);
+export const incrementReservationStock = (incrementData) =>
+  api.post("/reservation/incrementReservationStock", incrementData);
+export const verifyReservation = (cartId) =>
+  api.get(`/reservation/verify/${cartId}`);
 
-api.createProduct = (productData) => {
-  return api.post("/product/createProduct", productData);
-};
+// Order endpoints
+export const placeOrder = (orderData) =>
+  api.post("/order/placeOrder", orderData);
+export const getOrderHistory = (userId) =>
+  api.get(`/order/getOrderHistory/${userId}`);
+export const allOrdersList = () => api.get("/order/allOrdersList");
+export const deleteOrder = (orderId) =>
+  api.delete(`/order/deleteOrder/${orderId}`);
+export const updateOrder = (updateData) =>
+  api.put("/order/updateOrder", updateData);
+export const getOrderStats = () => api.get("/order/getOrderStats");
 
-api.getProducts = (productConstraints) => {
-  return api.get("/product/getProducts", {
-    params: {
-      productConstraints: JSON.stringify(productConstraints),
-    },
-  });
-};
-api.deleteProduct = (productID) => {
-  return api.post("/product/deleteProduct", { productID });
-};
-api.updateProduct = (productData) => {
-  return api.put("/product/updateProduct", productData);
-};
+// User endpoints
+export const getUserDetails = (email) =>
+  api.get(`/user/getUserDetails/${email}`);
+export const getAllUsers = () => api.get("/user/getAllUsers");
+export const deleteUser = (userId) => api.delete(`/user/deleteUser/${userId}`);
+export const updateUser = (updateData) =>
+  api.put("/user/updateUser", updateData);
 
-api.searchProduct = (data) => {
-  return api.get("/search/products", { params: { data } });
-};
+// Coupon endpoints
+export const verifyCoupon = (couponData) =>
+  api.post("/coupon/verifyCoupon", couponData);
+export const createCoupon = (couponData) =>
+  api.post("/coupon/createCoupon", couponData);
+export const getAllCoupons = () => api.get("/coupon/getAllCoupons");
+export const deleteCoupon = (couponId) =>
+  api.delete(`/coupon/deleteCoupon/${couponId}`);
 
-api.verifyStock = (itemName, selectedVariant, itemQuantity) => {
-  return api.get("/product/verifyStock", {
-    params: { itemName, selectedVariant, itemQuantity },
-  });
-};
+// Stripe endpoints
+export const createCheckoutSession = (checkoutData) =>
+  api.post("/stripe/createCheckoutSession", checkoutData);
 
-// --- ORDER API'S ---
-
-api.placeOrder = (
-  cartItems,
-  couponCode,
-  subtotal,
-  discountedPrice,
-  SHIPPING_COST,
-  finalCost,
-  userInfo,
-  deliveryAddress,
-  paymentMethod,
-  cartId
-) => {
-  return api.post("/order/placeOrder", {
-    cartItems,
-    couponCode,
-    subtotal,
-    discountedPrice,
-    SHIPPING_COST,
-    finalCost,
-    userInfo,
-    deliveryAddress,
-    paymentMethod,
-    cartId,
-  });
-};
-
-api.getAllOrdersList = (email, currPage) => {
-  return api.get("/order/allOrdersList", {
-    params: {
-      email,
-      currPage,
-    },
-  });
-};
-
-api.updateOrder = (orderId, orderData) => {
-  return api.put(`/order/update/${orderId}`, orderData);
-};
-
-api.deleteOrder = (orderId) => {
-  return api.delete(`/order/delete/${orderId}`);
-};
-
-api.getOrderHistory = (userInfo, currPage) => {
-  return api.get("/order/getOrders", {
-    params: {
-      email: userInfo.email,
-      currPage,
-    },
-  });
-};
-
-// --- USER API'S ---
-
-api.updateUser = (userId, userData) => {
-  const formData = new FormData();
-  Object.entries(userData).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) {
-      formData.append(key, value);
-    }
-  });
-  return api.put(`/user/update/${userId}`, formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-};
-
-api.deleteUser = (userId, editorEmail) => {
-  return api.delete(`/user/delete/${userId}`, {
-    data: { editorEmail },
-  });
-};
-
-api.getUsers = (viewerEmail, currPage, searchQuery, role) => {
-  return api.get("/user/getUsers", {
-    params: {
-      viewerEmail,
-      currPage,
-      searchQuery,
-      role,
-    },
-  });
-};
-
-// --- COUPON API'S ---
-
-api.createCoupon = (couponData) => {
-  return api.post("/coupon/createCoupon", couponData);
-};
-
-api.updateCoupon = (couponId, couponData) => {
-  return api.put(`/coupon/update/${couponId}`, couponData);
-};
-
-api.getAllCoupons = (email, currPage) => {
-  return api.get("/coupon/allCoupons", {
-    params: {
-      email,
-      currPage,
-    },
-  });
-};
-
-api.deleteCoupon = (couponId) => {
-  return api.delete(`/coupon/delete/${couponId}`);
-};
-
-api.getCouponStats = (email) => {
-  return api.get("/coupon/stats", { params: { email } });
-};
-
-api.verifyCouponCode = (couponCode, userEmail) => {
-  return api.post("/coupon/verify", { couponCode, userEmail });
-};
-
-// --- EXPORT API ---
-
-api.exportData = (dataType, email, format) => {
-  return api.get(`/export/${dataType}`, {
-    params: {
-      email,
-      format,
-    },
-    responseType: "blob", // Important for handling file downloads
-  });
-};
-
-// --- API'S FOR STOCK MANAGEMENT
-api.reserveStock = (cartId, productId, variant, quantity) => {
-  return api.post("/reserveStock", { cartId, productId, variant, quantity });
-};
-
-api.releaseStock = (cartId, productId, variant, quantity) => {
-  return api.post("/releaseStock", { cartId, productId, variant, quantity });
-};
-
-api.decrementReservationStock = (cartId, productId, variant, quantity) => {
-  return api.post("/decrementReservationStock", {
-    cartId,
-    productId,
-    variant,
-    quantity,
-  });
-};
-
-// --- STRIPE API ---
-api.createCheckOutSession = (
-  cartId,
-  couponCode,
-  userEmail,
-  originalTotal,
-  finalTotal,
-  discountAmount,
-  deliveryAddress
-) => {
-  return api.post("/stripe/create-checkout-session", {
-    cartId,
-    couponCode,
-    userEmail,
-    originalTotal,
-    finalTotal,
-    discountAmount,
-    deliveryAddress,
-  });
-};
 export default api;

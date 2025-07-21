@@ -32,7 +32,6 @@ const productSchema = new mongoose.Schema({
       return this.category === "comics";
     },
   },
-  //variants section in productDes.jx
   sizes: {
     type: [String],
     required: function () {
@@ -46,30 +45,48 @@ const productSchema = new mongoose.Schema({
     },
   },
   stock: {
-    type: Schema.Types.Mixed, // allows mongodb to accept multiple data types
+    type: Schema.Types.Mixed,
     required: true,
     validate: {
       validator: function (value) {
-        if (this.category === "comics") {
-          const isObject = typeof value === "object";
-          const hasValidVolumes = Object.keys(value).every(
-            (key) => this.volumes.includes(key) && Number.isInteger(value[key])
+        if (
+          this.category === "comics" ||
+          this.category === "clothes" ||
+          this.category === "shoes"
+        ) {
+          const isObject = typeof value === "object" && value !== null;
+          if (!isObject) return false;
+
+          // Check that all stock values are non-negative integers
+          const allValuesValid = Object.values(value).every(
+            (stockValue) => Number.isInteger(stockValue) && stockValue >= 0
           );
-          return isObject && hasValidVolumes;
-        } else if (this.category === "clothes" || this.category === "shoes") {
-          const isObject = typeof value === "object";
-          const isValidSizes = Object.keys(value).every(
-            (key) => this.sizes.includes(key) && Number.isInteger(value[key])
-          );
-          return isObject && isValidSizes;
+
+          if (!allValuesValid) return false;
+
+          if (this.category === "comics") {
+            //  return true if -> volume exists && Object(stock) keys === volumes keys
+            return (
+              this.volumes &&
+              Object.keys(value).every((key) => this.volumes.includes(key))
+            );
+          } else {
+            //  return true if -> size exists && Object(stock) keys === sizes keys
+            return (
+              this.sizes &&
+              Object.keys(value).every((key) => this.sizes.includes(key))
+            );
+          }
         } else {
-          return typeof value === "number" && Number.isInteger(value);
+          // For toys and other categories - stock should be a non-negative integer
+          return (
+            typeof value === "number" && Number.isInteger(value) && value >= 0
+          );
         }
       },
-      message: "Invalid stock format for this category",
+      message: "Invalid stock format or negative stock not allowed",
     },
   },
-  //for filter bar
   merchType: {
     type: String,
     required: function () {
@@ -82,22 +99,11 @@ const productSchema = new mongoose.Schema({
       return this.category === "toys";
     },
   },
-
-  // sold: {
-  //   type: Number,
-  // },
 });
 
 // Add text index on searchable fields
-productSchema.index(
-  {
-    name: "text",
-    category: "text",
-  },
-  {
-    weights: { name: 5, category: 4 },
-    name: "ProductSearchIndex",
-  }
-);
+productSchema.index({ name: "text", description: "text" });
 
-module.exports = mongoose.model("products", productSchema);
+const Product = mongoose.model("products", productSchema);
+
+module.exports = Product;

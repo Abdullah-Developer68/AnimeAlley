@@ -1,79 +1,216 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../api/api";
-import { getOrCreateCartId } from "../../utils/cartId";
-import { addToCart, increaseQuantity, decreaseQuantity } from "./cartSlice";
+import { toast } from "react-toastify";
 
-// --- USED IN ProductDes.jsx ---
-
-// Add to cart with stock reservation
+// Add item to cart with partial reservation handling
 export const addToCartAsync = createAsyncThunk(
   "cart/addToCartAsync",
-  async ({ product, variant, quantity }, { dispatch, rejectWithValue }) => {
-    const cartId = getOrCreateCartId();
+  async (
+    { cartId, productId, variant, requestedQuantity, productData },
+    { rejectWithValue }
+  ) => {
     try {
-      const res = await api.reserveStock(
+      const response = await api.post("/reservation/reserveStock", {
         cartId,
-        product._id,
+        productId,
         variant,
-        quantity
+        requestedQuantity,
+      });
+
+      if (response.data.success) {
+        const { reservedQuantity, isPartial, availableStock } = response.data;
+
+        // Handle partial reservation scenario
+        if (isPartial) {
+          const userConfirmed = await new Promise((resolve) => {
+            toast.info(
+              `Only ${reservedQuantity} out of ${requestedQuantity} items available. ${reservedQuantity} have been reserved. Continue?`,
+              {
+                onClose: () => resolve(false),
+                onClick: () => resolve(true),
+                autoClose: false,
+              }
+            );
+          });
+
+          if (!userConfirmed) {
+            // Release the reserved stock if user doesn't confirm
+            await api.post("/reservation/releaseStock", {
+              cartId,
+              productId,
+              variant,
+              quantity: reservedQuantity,
+            });
+            return rejectWithValue("User cancelled partial reservation");
+          }
+        }
+
+        // Return data for cart state update
+        return {
+          cartId,
+          productId,
+          variant,
+          quantity: reservedQuantity,
+          productData,
+          isPartial,
+          message: isPartial
+            ? `${reservedQuantity} items added to cart (partial quantity)`
+            : `${reservedQuantity} items added to cart`,
+        };
+      }
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Failed to add item to cart";
+      toast.error(errorMessage);
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
+// Increment cart item quantity with atomic reservation
+export const incrementCartItemAsync = createAsyncThunk(
+  "cart/incrementCartItemAsync",
+  async ({ cartId, productId, variant }, { rejectWithValue }) => {
+    try {
+      const response = await api.post(
+        "/reservation/incrementReservationStock",
+        {
+          cartId,
+          productId,
+          variant,
+        }
       );
-      if (res.data.success) {
-        dispatch(
-          addToCart({
-            ...product,
-            selectedVariant: variant,
-            itemQuantity: quantity,
-          })
-        );
-        return true;
-      } else {
-        return rejectWithValue(res.data.message || "Failed to reserve stock");
+
+      if (response.data.success) {
+        return {
+          cartId,
+          productId,
+          variant,
+          newQuantity: response.data.newQuantity,
+        };
       }
-    } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Server error");
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Cannot increase quantity";
+      toast.error(errorMessage);
+      return rejectWithValue(errorMessage);
     }
   }
 );
 
-// --- USED IN Cart.jsx ---
-
-// Increase/Decrease quantity with stock reservation/release
-export const decrementReservationStockAsync = createAsyncThunk(
-  "cart/decrementReservationStockAsync",
-  async ({ id, variant }, { dispatch, getState, rejectWithValue }) => {
-    const cartId = getOrCreateCartId();
-    const item = getState().cart.cartItems.find(
-      (i) => i._id === id && i.selectedVariant === variant
-    );
-    if (!item) return rejectWithValue("Item not found in cart");
+// Decrement cart item quantity with atomic stock restoration
+export const decrementCartItemAsync = createAsyncThunk(
+  "cart/decrementCartItemAsync",
+  async (
+    { cartId, productId, variant, currentQuantity },
+    { rejectWithValue }
+  ) => {
     try {
-      await api.decrementReservationStock(cartId, id, variant, 1);
-      dispatch(decreaseQuantity({ id, selectedVariant: variant }));
-      return true;
-    } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Server error");
+      const response = await api.post(
+        "/reservation/decrementReservationStock",
+        {
+          cartId,
+          productId,
+          variant,
+          quantity: 1, // Always decrement by 1
+        }
+      );
+
+      if (response.data.success) {
+        return {
+          cartId,
+          productId,
+          variant,
+          newQuantity: currentQuantity - 1,
+        };
+      }
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Failed to decrease quantity";
+      toast.error(errorMessage);
+      return rejectWithValue(errorMessage);
     }
   }
 );
 
-export const incrementReservationStockAsync = createAsyncThunk(
-  "cart/incrementReservationStockAsync",
-  async ({ id, variant }, { dispatch, getState, rejectWithValue }) => {
-    const cartId = getOrCreateCartId();
-    const item = getState().cart.cartItems.find(
-      (i) => i._id === id && i.selectedVariant === variant
-    );
-    if (!item) return rejectWithValue("Item not found in cart");
+// Remove item from cart completely
+export const removeFromCartAsync = createAsyncThunk(
+  "cart/removeFromCartAsync",
+  async ({ cartId, productId, variant, quantity }, { rejectWithValue }) => {
     try {
-      const res = await api.reserveStock(cartId, id, variant, 1);
-      if (res.data.success) {
-        dispatch(increaseQuantity({ id, selectedVariant: variant }));
-        return true;
-      } else {
-        return rejectWithValue(res.data.message || "Failed to reserve stock");
+      const response = await api.post("/reservation/releaseStock", {
+        cartId,
+        productId,
+        variant,
+        quantity,
+      });
+
+      if (response.data.success) {
+        return {
+          cartId,
+          productId,
+          variant,
+        };
       }
-    } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Server error");
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Failed to remove item";
+      toast.error(errorMessage);
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
+// Clear entire cart
+export const clearCartAsync = createAsyncThunk(
+  "cart/clearCartAsync",
+  async ({ cartItems, cartId }, { rejectWithValue }) => {
+    try {
+      // Release all reserved stock
+      const releasePromises = cartItems.map((item) =>
+        api.post("/reservation/releaseStock", {
+          cartId,
+          productId: item._id,
+          variant: item.selectedVariant,
+          quantity: item.quantity,
+        })
+      );
+
+      await Promise.all(releasePromises);
+
+      return { success: true };
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Failed to clear cart";
+      toast.error(errorMessage);
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
+// Verify cart before checkout
+export const verifyCartBeforeCheckoutAsync = createAsyncThunk(
+  "cart/verifyCartBeforeCheckoutAsync",
+  async ({ cartItems, cartId }, { rejectWithValue }) => {
+    try {
+      // Check if reservation still exists and is valid using the new API function
+      const response = await api.get(`/reservation/verify/${cartId}`);
+
+      if (!response.data.success) {
+        toast.error("Cart has expired. Please add items again.");
+        return rejectWithValue("Cart expired");
+      }
+
+      return {
+        success: true,
+        message: "Cart verified successfully",
+        data: response.data.data,
+      };
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Cart verification failed";
+      toast.error(errorMessage);
+      return rejectWithValue(errorMessage);
     }
   }
 );

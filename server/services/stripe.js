@@ -54,9 +54,6 @@ const createCheckoutSession = async (req, res) => {
           product_data: {
             name: item.productId.name,
             images: [`${item.productId.image}`],
-            // images: [
-            //   "https://images.unsplash.com/photo-1519125323398-675f0ddb6308",
-            // ],
           },
           unit_amount: Math.round(itemDiscountedPrice * 100), // Use discounted price
         },

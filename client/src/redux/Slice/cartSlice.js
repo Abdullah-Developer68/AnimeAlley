@@ -24,6 +24,12 @@ const initialState = {
   couponApplied:
     localStorage.getItem("couponApplied") === "true" ? true : false,
   couponCode: localStorage.getItem("couponCode") || "",
+  couponDiscount: localStorage.getItem("couponDiscount")
+    ? Number(localStorage.getItem("couponDiscount"))
+    : 0,
+  couponCartCount: localStorage.getItem("couponCartCount")
+    ? Number(localStorage.getItem("couponCartCount"))
+    : 0,
   finalCost: localStorage.getItem("finalCost")
     ? Number(localStorage.getItem("finalCost"))
     : 0,
@@ -99,26 +105,51 @@ export const cartSlice = createSlice({
     emptyCart: (state) => {
       // Release stock for all items (async logic should be handled in thunk)
       state.cartItems = [];
+      state.couponApplied = false;
+      state.couponCode = "";
+      state.couponDiscount = 0;
+      state.couponCartCount = 0;
+      state.finalCost = 0;
+
       localStorage.setItem("cartItems", JSON.stringify([]));
+      localStorage.setItem("couponApplied", "false");
+      localStorage.setItem("couponCode", "");
+      localStorage.setItem("couponDiscount", "0");
+      localStorage.setItem("couponCartCount", "0");
+      localStorage.setItem("finalCost", "0");
     },
     applyCoupon: (state, action) => {
-      const { couponCode, finalCost } = action.payload;
+      const { couponCode, finalCost, discountPercentage } = action.payload;
       state.couponApplied = true;
       state.couponCode = couponCode;
+      state.couponDiscount = discountPercentage || 0;
+      state.couponCartCount = state.cartItems.length;
       state.finalCost = finalCost;
 
       localStorage.setItem("couponApplied", "true");
       localStorage.setItem("couponCode", couponCode);
+      localStorage.setItem(
+        "couponDiscount",
+        (discountPercentage || 0).toString()
+      );
+      localStorage.setItem(
+        "couponCartCount",
+        state.cartItems.length.toString()
+      );
       localStorage.setItem("finalCost", finalCost.toString());
     },
 
     resetCoupon: (state) => {
       state.couponApplied = false;
       state.couponCode = "";
+      state.couponDiscount = 0;
+      state.couponCartCount = 0;
       state.finalCost = 0;
 
       localStorage.setItem("couponApplied", "false");
       localStorage.setItem("couponCode", "");
+      localStorage.setItem("couponDiscount", "0");
+      localStorage.setItem("couponCartCount", "0");
       localStorage.setItem("finalCost", "0");
     },
     setFinalCost: (state, action) => {

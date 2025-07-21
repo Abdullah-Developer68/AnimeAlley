@@ -1,19 +1,20 @@
 import { Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import {
-  increaseQuantity,
-  emptyCart,
   applyCoupon,
   resetCoupon,
   setFinalCost,
 } from "../redux/Slice/cartSlice";
 import {
-  decrementReservationStockAsync,
-  incrementReservationStockAsync,
+  incrementCartItemAsync,
+  decrementCartItemAsync,
+  removeFromCartAsync,
+  clearCartAsync,
+  verifyCartBeforeCheckoutAsync,
 } from "../redux/Slice/cartThunks";
-import { getOrCreateCartId } from "../utils/cartId";
 import StripeButton from "../components/Cart/StripeButton";
 import { useState, useEffect } from "react";
+import assets from "../assets/asset";
 import api from "../api/api";
 import { toast } from "react-toastify";
 
@@ -23,7 +24,10 @@ const Cart = () => {
   const cartItems = useSelector((state) => state.cart.cartItems);
   const couponApplied = useSelector((state) => state.cart.couponApplied);
   const couponCode = useSelector((state) => state.cart.couponCode);
+  const couponDiscount = useSelector((state) => state.cart.couponDiscount);
+  const couponCartCount = useSelector((state) => state.cart.couponCartCount);
   const finalCost = useSelector((state) => state.cart.finalCost);
+  const cartId = useSelector((state) => state.cart.cartId);
 
   // Constants
   const SHIPPING_COST = 5;
@@ -34,16 +38,16 @@ const Cart = () => {
       ? localStorage.getItem("deliveryAddress")
       : ""
   );
-  const [paymentMethod, setPaymentMethod] = useState(""); // Default to Cash on Delivery
-  const [couponInput, setCouponInput] = useState(""); // Local state for coupon input
-  const [couponDiscount, setCouponDiscount] = useState(0); // Store coupon discount percentage
-  const [originalPrice, setOriginalPrice] = useState(0); // Store original price before discount
+  const [paymentMethod, setPaymentMethod] = useState("");
+  const [couponInput, setCouponInput] = useState(couponCode);
+  const [originalPrice, setOriginalPrice] = useState(0);
+  const [loadingItems, setLoadingItems] = useState({}); // Track loading state for individual items
 
   // Price calculations
   const calculateSubtotal = () => {
     return Math.round(
       cartItems.reduce(
-        (total, item) => total + item.price * item.itemQuantity,
+        (total, item) => total + item.price * item.quantity, // Updated property name
         0
       )
     );
@@ -55,7 +59,6 @@ const Cart = () => {
   useEffect(() => {
     if (cartItems.length === 0) {
       dispatch(resetCoupon());
-      setCouponDiscount(0);
       setOriginalPrice(0);
       return;
     }
@@ -64,11 +67,9 @@ const Cart = () => {
     setOriginalPrice(totalBeforeDiscount);
 
     if (!couponApplied || couponDiscount === 0) {
-      // No coupon: final cost is subtotal + shipping
       dispatch(resetCoupon());
       dispatch(setFinalCost(totalBeforeDiscount));
     } else {
-      // Coupon applied: use stored discount percentage
       const discountedPrice = Math.round(subtotal * (1 - couponDiscount / 100));
       const newFinalCost = Math.round(discountedPrice + SHIPPING_COST);
       dispatch(
@@ -76,6 +77,7 @@ const Cart = () => {
           couponCode: couponCode,
           discountedPrice,
           finalCost: newFinalCost,
+          discountPercentage: couponDiscount,
         })
       );
     }
@@ -93,6 +95,17 @@ const Cart = () => {
   useEffect(() => {
     localStorage.setItem("deliveryAddress", deliveryAddress);
   }, [deliveryAddress]);
+
+  // Show toast when new items are added after coupon is applied
+  useEffect(() => {
+    if (
+      couponApplied &&
+      couponCartCount > 0 &&
+      cartItems.length > couponCartCount
+    ) {
+      toast.info("Coupon discount won't apply to newly added items");
+    }
+  }, [cartItems.length, couponApplied, couponCartCount]);
 
   // Coupon handling
   const handleCouponCode = async () => {
@@ -113,21 +126,20 @@ const Cart = () => {
         return;
       }
 
-      const response = await api.verifyCouponCode(
-        couponInput.trim(),
-        userInfo.email
-      );
+      const response = await api.post("/coupon/verifyCoupon", {
+        couponCode: couponInput.trim(),
+        userEmail: userInfo.email,
+      });
 
-      if (response.success === false) {
+      if (response.data.success === false) {
         toast.error("Invalid coupon code");
         return;
       }
 
-      const coupon = response.data?.coupondata.coupon;
+      const coupon = response.data?.coupondata?.coupon;
 
       if (coupon) {
         const discount = coupon.discountPercentage;
-        setCouponDiscount(discount); // Store discount percentage in state
         const discountedPrice = Math.round(subtotal * (1 - discount / 100));
         const newFinalCost = Math.round(discountedPrice + SHIPPING_COST);
 
@@ -136,6 +148,7 @@ const Cart = () => {
             couponCode: couponInput.trim(),
             discountedPrice,
             finalCost: newFinalCost,
+            discountPercentage: discount,
           })
         );
 
@@ -150,36 +163,51 @@ const Cart = () => {
     }
   };
 
-  // Order placement
-  const handlePlaceOrder = () => {
+  // Order placement with cart verification
+  const handlePlaceOrder = async () => {
     if (!deliveryAddress.trim()) {
       toast.error("Please enter a delivery address");
       return;
     }
+
     try {
+      // Verify cart before checkout
+      await dispatch(
+        verifyCartBeforeCheckoutAsync({
+          cartItems,
+          cartId,
+        })
+      ).unwrap();
+
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      api.placeOrder(
+
+      // Place order logic here - you may need to update this based on your order API
+      await api.post("/order/placeOrder", {
         cartItems,
         couponCode,
         subtotal,
         finalCost,
         SHIPPING_COST,
-        finalCost,
         userInfo,
         deliveryAddress,
         paymentMethod,
-        getOrCreateCartId() // <-- returns an existing cartId otherwise creates a new one.
-      );
+        cartId,
+      });
+
+      // Clear cart after successful order
+      await dispatch(clearCartAsync({ cartItems, cartId })).unwrap();
 
       // Reset states
-      dispatch(emptyCart());
       dispatch(resetCoupon());
+      setCouponInput("");
       setPaymentMethod("cod");
 
       toast.success("Order placed successfully!");
     } catch (error) {
       console.error(error);
-      toast.error(error.response?.data?.message || "Something went wrong");
+      toast.error(
+        error.response?.data?.message || error.message || "Something went wrong"
+      );
     }
   };
 
@@ -199,66 +227,73 @@ const Cart = () => {
     );
   };
 
-  //verify Stock
-  const checkStock = async (item) => {
-    try {
-      // Always check if 1 more can be added, not the total
-      const res = await api.verifyStock(item.name, item.selectedVariant, 1);
-      if (res.data.success) {
-        if (!res.data.isAvailable) {
-          toast.error(res.data.message);
-          // Update the item quantity to maximum available
-          dispatch(
-            increaseQuantity({
-              id: item._id,
-              selectedVariant: item.selectedVariant,
-              newQuantity: res.data.stockAvailable,
-            })
-          );
-          return false;
-        }
-        return true;
-      }
-    } catch (error) {
-      console.error("Error checking stock:", error);
-      return false;
-    }
-  };
-
-  // Quantity handlers
+  // Quantity handlers - Updated to use new atomic reservation system
   const handleIncreaseQuantity = async (item) => {
-    const canIncrease = await checkStock(item);
-    if (canIncrease) {
-      // dispatch(
-      //   increaseQuantity({
-      //     id: item._id,
-      //     selectedVariant: item.selectedVariant,
-      //   })
-      // );
-      dispatch(
-        incrementReservationStockAsync({
-          id: item._id,
+    const itemKey = `${item._id}-${item.selectedVariant}`;
+    setLoadingItems((prev) => ({ ...prev, [itemKey]: "increasing" }));
+
+    try {
+      await dispatch(
+        incrementCartItemAsync({
+          cartId,
+          productId: item._id,
           variant: item.selectedVariant,
         })
-      )
-        .unwrap()
-        .catch((err) => {
-          toast.error(err);
-        });
+      ).unwrap();
+      // Error handling is done in the thunk so not need for catch
+    } finally {
+      setLoadingItems((prev) => {
+        const newState = { ...prev };
+        delete newState[itemKey];
+        return newState;
+      });
     }
   };
 
-  const handleDecreaseQuantity = (item) => {
-    dispatch(
-      decrementReservationStockAsync({
-        id: item._id,
-        variant: item.selectedVariant,
-      })
-    )
-      .unwrap()
-      .catch((err) => {
-        toast.error(err);
+  const handleDecreaseQuantity = async (item) => {
+    const itemKey = `${item._id}-${item.selectedVariant}`;
+    setLoadingItems((prev) => ({ ...prev, [itemKey]: "decreasing" }));
+
+    try {
+      await dispatch(
+        decrementCartItemAsync({
+          cartId,
+          productId: item._id,
+          variant: item.selectedVariant,
+          currentQuantity: item.quantity, // Updated property name
+        })
+      ).unwrap();
+      // Error handling is done in the thunk so no need for catch
+    } finally {
+      setLoadingItems((prev) => {
+        const newState = { ...prev };
+        delete newState[itemKey];
+        return newState;
       });
+    }
+  };
+
+  const handleRemoveItem = async (item) => {
+    const itemKey = `${item._id}-${item.selectedVariant}`;
+    setLoadingItems((prev) => ({ ...prev, [itemKey]: "removing" }));
+
+    try {
+      await dispatch(
+        removeFromCartAsync({
+          cartId,
+          productId: item._id,
+          variant: item.selectedVariant,
+          quantity: item.quantity, // Updated property name
+        })
+      ).unwrap();
+      // Error handling is done in the thunk so no need for catch
+    } finally {
+      setLoadingItems((prev) => {
+        const newState = { ...prev };
+        delete newState[itemKey];
+        return newState;
+      });
+    }
   };
 
   // Render Component
@@ -285,66 +320,104 @@ const Cart = () => {
               </Link>
             </div>
 
+            {/* Empty Cart Message */}
+            {cartItems.length === 0 && (
+              <div className="flex flex-col items-center justify-center flex-1 text-center">
+                <div className="text-6xl mb-4">🛒</div>
+                <h3 className="text-xl font-semibold text-white/70 mb-2">
+                  Your cart is empty
+                </h3>
+                <p className="text-white/50 mb-6">
+                  Add some items to get started!
+                </p>
+                <Link to="/shop">
+                  <button className="px-6 py-3 bg-pink-500 text-black rounded-lg font-medium hover:shadow-lg hover:shadow-pink-500/25 transition-all duration-300">
+                    Continue Shopping
+                  </button>
+                </Link>
+              </div>
+            )}
+
             {/* Cart Items List */}
             <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-pink-500 scrollbar-track-white/10">
-              {cartItems.map((item, index) => (
-                <div
-                  key={index}
-                  className="mb-4 sm:mb-6 bg-white/5 rounded-xl p-3 sm:p-4 hover:bg-white/10 transition-all duration-300 border border-white/10 last:mb-4"
-                >
-                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
-                    {/* Image Section */}
-                    <div className="shrink-0 mx-auto sm:mx-0">
-                      <img
-                        src={`${item.image}`}
-                        alt={item.name}
-                        className="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-lg shadow-lg hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
+              {cartItems.map((item, index) => {
+                const itemKey = `${item._id}-${item.selectedVariant}`;
+                const isLoading = loadingItems[itemKey];
 
-                    {/* Details Section */}
-                    <div className="flex-grow space-y-2 sm:space-y-3 w-full">
-                      <div className="flex flex-col w-full">
-                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0 mb-2">
-                          <h3 className="text-lg sm:text-xl font-medium text-white/90 hover:text-pink-500 transition-colors text-center sm:text-left">
-                            {item.name}
-                          </h3>
-                          <p className="text-base sm:text-lg font-bold text-white text-center sm:text-right">
-                            <span className="text-black p-1 rounded-md font-bold text-xs bg-yellow-500">
-                              {item.price * item.itemQuantity} $
-                            </span>
-                          </p>
-                        </div>
-
-                        {/* Variant Badge - Moved inside the flex-col container */}
-                        {renderVariantBadge(item)}
+                return (
+                  <div
+                    key={index}
+                    className="mb-4 sm:mb-6 bg-white/5 rounded-xl p-3 sm:p-4 hover:bg-white/10 transition-all duration-300 border border-white/10 last:mb-4"
+                  >
+                    <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+                      {/* Image Section */}
+                      <div className="shrink-0 mx-auto sm:mx-0">
+                        <img
+                          src={`${item.image}`}
+                          alt={item.name}
+                          className="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-lg shadow-lg hover:scale-105 transition-transform duration-300"
+                        />
                       </div>
 
-                      {/* Quantity Controls */}
-                      <div className="flex items-center gap-4 justify-center sm:justify-start">
-                        <span className="text-white/60 text-sm">Quantity:</span>
-                        <div className="flex items-center border border-white/20 rounded-lg overflow-hidden bg-black/40">
-                          <button
-                            className="cursor-pointer px-4 py-2 text-white/90 hover:bg-pink-500/20 transition-colors"
-                            onClick={() => handleDecreaseQuantity(item)}
-                          >
-                            -
-                          </button>
-                          <span className="w-12 text-center text-white font-medium">
-                            {item.itemQuantity}
+                      {/* Details Section */}
+                      <div className="flex-grow space-y-2 sm:space-y-3 w-full">
+                        <div className="flex flex-col w-full">
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0 mb-2">
+                            <h3 className="text-lg sm:text-xl font-medium text-white/90 hover:text-pink-500 transition-colors text-center sm:text-left">
+                              {item.name}
+                            </h3>
+                            <div className="flex items-center gap-2 justify-center sm:justify-end">
+                              <p className="text-base sm:text-lg font-bold text-white text-center sm:text-right">
+                                <span className="text-black p-1 rounded-md font-bold text-xs bg-yellow-500">
+                                  {item.price * item.quantity} ${" "}
+                                  {/* Updated property name */}
+                                </span>
+                              </p>
+                              <button
+                                onClick={() => handleRemoveItem(item)}
+                                disabled={isLoading === "removing"}
+                                className="text-red-400 hover:text-red-300 p-1 transition-colors disabled:opacity-50"
+                                title="Remove item"
+                              >
+                                {isLoading === "removing" ? "..." : "🗑️"}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Variant Badge */}
+                          {renderVariantBadge(item)}
+                        </div>
+
+                        {/* Quantity Controls */}
+                        <div className="flex items-center gap-4 justify-center sm:justify-start">
+                          <span className="text-white/60 text-sm">
+                            Quantity:
                           </span>
-                          <button
-                            className="cursor-pointer px-4 py-2 text-white/90 hover:bg-pink-500/20 transition-colors"
-                            onClick={() => handleIncreaseQuantity(item)}
-                          >
-                            +
-                          </button>
+                          <div className="flex items-center border border-white/20 rounded-lg overflow-hidden bg-black/40">
+                            <button
+                              className="cursor-pointer px-4 py-2 text-white/90 hover:bg-pink-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              onClick={() => handleDecreaseQuantity(item)}
+                              disabled={item.quantity <= 1 || isLoading} // Updated property name
+                            >
+                              {isLoading === "decreasing" ? "..." : "-"}
+                            </button>
+                            <span className="w-12 text-center text-white font-medium">
+                              {item.quantity} {/* Updated property name */}
+                            </span>
+                            <button
+                              className="cursor-pointer px-4 py-2 text-white/90 hover:bg-pink-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              onClick={() => handleIncreaseQuantity(item)}
+                              disabled={isLoading}
+                            >
+                              {isLoading === "increasing" ? "..." : "+"}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -422,14 +495,18 @@ const Cart = () => {
                           : "bg-white/10 text-white/70 hover:bg-white/20"
                       }`}
                   >
-                    Cash on Delivery
+                    <img
+                      src={assets.cod}
+                      className="w-10"
+                      alt="Cash on Delivery"
+                    />
                   </button>
                   <StripeButton />
                 </div>
               </div>
 
               {/* Checkout Button */}
-              {paymentMethod === "cod" && (
+              {paymentMethod === "cod" && cartItems.length > 0 && (
                 <button
                   className="w-full py-3 rounded-lg bg-pink-500 text-black cursor-pointer font-medium hover:shadow-lg hover:shadow-pink-500/25 transition-all duration-300 text-sm sm:text-base mt-4"
                   onClick={handlePlaceOrder}

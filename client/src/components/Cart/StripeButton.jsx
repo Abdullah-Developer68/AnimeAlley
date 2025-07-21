@@ -3,6 +3,7 @@ import { getOrCreateCartId } from "../../utils/cartId";
 import { loadStripe } from "@stripe/stripe-js";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import assets from "../../assets/asset";
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const StripeButton = () => {
@@ -54,7 +55,7 @@ const StripeButton = () => {
       className="px-2 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer
         bg-white/10 text-white/70 hover:bg-white/20"
     >
-      Online Payment
+      <img src={assets.creditCard} className="w-16" />
     </button>
   );
 };

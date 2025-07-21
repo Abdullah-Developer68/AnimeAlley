@@ -43,7 +43,7 @@ const Cards = ({ product }) => {
         {/* Price and Add to Cart */}
         <div className="flex justify-between items-center">
           <p className="text-black p-1 rounded-md font-bold text-xs bg-yellow-500">
-            Rs. {product.price}
+            {product.price} $
           </p>
           {/* Add to Cart Button with product._id as the url parameter */}
           <Link to={`/shop/:${product._id}`}>

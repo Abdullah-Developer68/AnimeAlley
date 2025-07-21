@@ -56,6 +56,8 @@ import loader from "./img/loader.svg";
 import activeCoupons from "./img/Dashboard/activeCoupons.svg";
 import couponUsage from "./img/Dashboard/couponUsage.svg";
 import couponDiscount from "./img/Dashboard/couponDiscount.svg";
+import cod from "./img/cod.png";
+import creditCard from "./img/creditCard.png";
 
 const assets = {
   logo,
@@ -116,6 +118,8 @@ const assets = {
   activeCoupons,
   couponUsage,
   couponDiscount,
+  cod,
+  creditCard,
 };
 
 export default assets;
