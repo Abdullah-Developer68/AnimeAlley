@@ -10,7 +10,7 @@ const initialState = {
   productData: JSON.parse(localStorage.getItem("productData")) || {},
 };
 
-export const shopSlice = createSlice({
+const shopSlice = createSlice({
   name: "shop",
   initialState,
   reducers: {

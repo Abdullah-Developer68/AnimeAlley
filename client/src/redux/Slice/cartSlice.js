@@ -8,6 +8,7 @@ function isCartExpired() {
   if (!cartTimestamp) return false;
   const now = Date.now();
   return (
+    // +ve value -> returns true (expired). -ve value -> returns false (not expired)
     now - parseInt(cartTimestamp, 10) > CART_EXPIRY_DAYS * 24 * 60 * 60 * 1000
   );
 }
@@ -29,7 +30,7 @@ const initialState = {
     : 0,
 };
 
-export const cartSlice = createSlice({
+const cartSlice = createSlice({
   name: "cart",
   initialState,
   reducers: {

@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import {
   increaseQuantity,
+  decreaseQuantity,
   emptyCart,
   applyCoupon,
   resetCoupon,
@@ -10,7 +11,7 @@ import {
 import {
   decrementReservationStockAsync,
   incrementReservationStockAsync,
-} from "../redux/Slice/cartThunks";
+} from "../redux/Thunk/cartThunks";
 import { getOrCreateCartId } from "../utils/cartId";
 import StripeButton from "../components/Cart/StripeButton";
 import { useState, useEffect } from "react";
@@ -227,38 +228,21 @@ const Cart = () => {
 
   // Quantity handlers
   const handleIncreaseQuantity = async (item) => {
-    const canIncrease = await checkStock(item);
-    if (canIncrease) {
-      // dispatch(
-      //   increaseQuantity({
-      //     id: item._id,
-      //     selectedVariant: item.selectedVariant,
-      //   })
-      // );
-      dispatch(
-        incrementReservationStockAsync({
-          id: item._id,
-          variant: item.selectedVariant,
-        })
-      )
-        .unwrap()
-        .catch((err) => {
-          toast.error(err);
-        });
-    }
+    dispatch(
+      increaseQuantity({
+        id: item._id,
+        selectedVariant: item.selectedVariant,
+      })
+    );
   };
 
   const handleDecreaseQuantity = (item) => {
     dispatch(
-      decrementReservationStockAsync({
+      decreaseQuantity({
         id: item._id,
-        variant: item.selectedVariant,
+        selectedVariant: item.selectedVariant,
       })
-    )
-      .unwrap()
-      .catch((err) => {
-        toast.error(err);
-      });
+    );
   };
 
   // Render Component

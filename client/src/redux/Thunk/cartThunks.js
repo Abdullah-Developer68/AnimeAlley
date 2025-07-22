@@ -1,7 +1,11 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../api/api";
 import { getOrCreateCartId } from "../../utils/cartId";
-import { addToCart, increaseQuantity, decreaseQuantity } from "./cartSlice";
+import {
+  addToCart,
+  increaseQuantity,
+  decreaseQuantity,
+} from "../Slice/cartSlice";
 
 // --- USED IN ProductDes.jsx ---
 

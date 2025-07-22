@@ -11,6 +11,7 @@ function loadModalState() {
   return null;
 }
 
+// default state of the dashboard slice
 const initialState = {
   reloadData: null, // Can be 'products', 'users', 'orders', etc.
   productDeleteModalState: {
@@ -57,10 +58,10 @@ const initialState = {
 
 const persistedState = loadModalState();
 const sliceInitialState = persistedState
-  ? { ...initialState, ...persistedState }
+  ? { ...initialState, ...persistedState } //...initialState -> gives default values & ...persistedState -> overrides matching keys/properties with localStorage values
   : initialState;
 
-export const dashboardSlice = createSlice({
+const dashboardSlice = createSlice({
   name: "dashboard",
   initialState: sliceInitialState,
   reducers: {
@@ -182,6 +183,7 @@ const persistKeys = [
   "exportModalState",
 ];
 
+// Used to persist the state of the dashboard slice to localStorage
 export const persistDashboardModalState = (state) => {
   const toPersist = {};
   persistKeys.forEach((key) => {
