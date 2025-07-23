@@ -1,8 +1,6 @@
 import { Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import {
-  increaseQuantity,
-  decreaseQuantity,
   emptyCart,
   applyCoupon,
   resetCoupon,
@@ -228,21 +226,28 @@ const Cart = () => {
 
   // Quantity handlers
   const handleIncreaseQuantity = async (item) => {
-    dispatch(
-      increaseQuantity({
-        id: item._id,
-        selectedVariant: item.selectedVariant,
-      })
-    );
+    const canIncrease = await checkStock(item);
+    if (canIncrease) {
+      dispatch(
+        increaseQuantity({
+          id: item._id,
+          selectedVariant: item.selectedVariant,
+        })
+      );
+    }
   };
 
   const handleDecreaseQuantity = (item) => {
     dispatch(
-      decreaseQuantity({
+      decrementReservationStockAsync({
         id: item._id,
-        selectedVariant: item.selectedVariant,
+        variant: item.selectedVariant,
       })
-    );
+    )
+      .unwrap()
+      .catch((err) => {
+        toast.error(err);
+      });
   };
 
   // Render Component
