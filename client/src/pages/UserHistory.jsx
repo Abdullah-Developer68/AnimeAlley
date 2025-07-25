@@ -39,7 +39,6 @@ const UserHistory = () => {
 
   const fetchOrders = async () => {
     try {
-      // Set loading state with a small delay to prevent flickering for fast API calls
       const loadingTimer = dispatch(setHistoryLoading(true));
 
       const userInfo = getUserInfo();
