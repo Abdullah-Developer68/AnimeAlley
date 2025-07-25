@@ -3,22 +3,26 @@ const userModel = require("../models/user.model.js");
 const productModel = require("../models/product.model.js");
 const couponModel = require("../models/coupon.model.js");
 const Reservation = require("../models/reservation.model.js");
+const mongoose = require("mongoose");
 const dbConnect = require("../config/dbConnect.js");
 
 const placeOrder = async (req, res) => {
   dbConnect();
+  const session = await mongoose.startSession();
+
   try {
+    session.startTransaction();
+
     const {
-      cartItems, // not used for order, reservation is source of truth
+      cartId,
       couponCode,
       subtotal,
       discountedPrice,
-      SHIPPING_COST,
       finalCost,
+      shippingCost,
       userInfo,
       deliveryAddress,
       paymentMethod,
-      cartId,
     } = req.body;
 
     if (!cartId) {
@@ -36,8 +40,37 @@ const placeOrder = async (req, res) => {
       });
     }
 
+    // Validate pricing fields
+    if (
+      subtotal === undefined ||
+      shippingCost === undefined ||
+      finalCost === undefined ||
+      isNaN(Number(subtotal)) ||
+      isNaN(Number(shippingCost)) ||
+      isNaN(Number(finalCost))
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid subtotal, shipping cost, and final cost are required",
+      });
+    }
+
+    // Validate pricing values are non-negative
+    if (
+      Number(subtotal) < 0 ||
+      Number(shippingCost) < 0 ||
+      Number(finalCost) < 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Pricing values cannot be negative",
+      });
+    }
+
     // Verify user exists in database
-    const user = await userModel.findOne({ email: userInfo.email });
+    const user = await userModel
+      .findOne({ email: userInfo.email })
+      .session(session);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -48,7 +81,7 @@ const placeOrder = async (req, res) => {
     // If a coupon is provided, check if the user has already used it
     let couponDoc = null;
     if (couponCode) {
-      couponDoc = await couponModel.findOne({ couponCode });
+      couponDoc = await couponModel.findOne({ couponCode }).session(session);
       if (!couponDoc) {
         return res.status(400).json({
           success: false,
@@ -63,8 +96,9 @@ const placeOrder = async (req, res) => {
       }
     }
 
-    // Fetch reservation for this cartId
-    const reservation = await Reservation.findOne({ cartId });
+    // === RESERVATION PROCESSING ===
+    const reservation = await Reservation.findOne({ cartId }).session(session);
+
     if (
       !reservation ||
       !reservation.products ||
@@ -76,7 +110,7 @@ const placeOrder = async (req, res) => {
       });
     }
 
-    // Prepare order items array from reservation
+    // Extract product data from reservation (productId, variant, quantity)
     const productsArray = reservation.products.map((item) => ({
       productId: item.productId,
       quantity: item.quantity,
@@ -84,76 +118,117 @@ const placeOrder = async (req, res) => {
       selectedVariant: item.variant,
     }));
 
-    // Populate price for each product (for order record)
+    // === ORDER DATA PREPARATION ===
+
+    // Loop through reservation products and fetch product prices (with session)
     for (let item of productsArray) {
-      const product = await productModel.findById(item.productId);
-      item.price = product ? product.price : 0;
+      const product = await productModel
+        .findById(item.productId)
+        .session(session);
+
+      // Fail entire order if any product is not found
+      if (!product) {
+        // throws an error and moves onto executing the catch block skipping the rest of the try block
+        throw new Error(
+          `Product not found for ID: ${item.productId}. Order cannot be processed.`
+        );
+      }
+
+      item.price = product.price;
     }
 
-    // Calculate final discount amount
-    const discount =
+    // Calculate discount amount from frontend pricing data
+    const concessionGiven =
       subtotal && discountedPrice ? subtotal - discountedPrice : 0;
 
-    // Prepare order data object
+    // Generate unique orderID
+    const orderID = "ORD" + Date.now() + Math.floor(Math.random() * 1000);
+
+    // Create complete order object with all required fields
     const orderData = {
-      orderID: "ORD" + Date.now() + Math.floor(Math.random() * 1000),
-      products: productsArray,
+      orderID,
+      products: productsArray, // Mapped reservation data with prices
       user: user._id,
       shippingAddress: deliveryAddress,
       paymentMethod,
       subtotal: Number(subtotal) || 0,
-      shippingCost: Number(SHIPPING_COST) || 0,
-      discount: Number(discount) || 0,
+      shippingCost: Number(shippingCost) || 0,
+      discount: Number(concessionGiven) || 0,
       finalAmount: Number(finalCost) || 0,
       couponCode,
     };
 
-    // Create new order in database
-    const newOrder = await orderModel.create(orderData);
+    const newOrder = await orderModel.create([orderData], { session });
 
-    // If a coupon was used, update its stats
-    if (couponCode && discount > 0) {
+    // === COUPON PROCESSING  ===
+
+    // Update coupon statistics and user coupon usage (if coupon was applied)
+    if (couponCode && concessionGiven > 0) {
+      // Update coupon statistics (totalUsage, lifeTimeDiscount) with session
       await couponModel.findOneAndUpdate(
         { couponCode },
         {
           $inc: {
             totalUsage: 1,
-            lifeTimeDiscount: discount,
+            lifeTimeDiscount: concessionGiven,
           },
-        }
+        },
+        { session }
       );
+
+      // Add coupon to user's couponCodeUsed array with session
       if (couponDoc && !user.couponCodeUsed.includes(couponDoc._id)) {
-        await userModel.findByIdAndUpdate(user._id, {
-          $addToSet: { couponCodeUsed: couponDoc._id },
-        });
+        await userModel.findByIdAndUpdate(
+          user._id,
+          {
+            $addToSet: { couponCodeUsed: couponDoc._id },
+          },
+          { session }
+        );
       }
     }
 
-    // Add order reference to user's orders array
-    await userModel.findByIdAndUpdate(user._id, {
-      $push: { orders: newOrder._id },
-    });
+    // === USER ORDER HISTORY UPDATE  ===
 
-    // Delete reservation after order is placed
-    await Reservation.deleteOne({ cartId });
+    // Add order reference to user's orders array using session
+    await userModel.findByIdAndUpdate(
+      user._id,
+      {
+        $push: { orders: newOrder[0]._id },
+      },
+      { session }
+    );
+
+    // === RESERVATION CLEANUP  ===
+
+    await Reservation.deleteOne({ cartId }).session(session);
 
     // Get populated order details for response
     const populatedOrder = await orderModel
-      .findById(newOrder._id)
+      .findById(newOrder[0]._id)
       .populate("products.productId")
-      .populate("user", "email username");
+      .populate("user", "email username")
+      .session(session);
 
     res.status(201).json({
       success: true,
       message: "Order placed successfully",
       order: populatedOrder,
     });
+
+    // Commit transaction on success
+    await session.commitTransaction();
   } catch (error) {
+    // Rollback transaction on any error
+    await session.abortTransaction();
     console.error("Error placing order:", error);
     res.status(500).json({
       success: false,
       message: error.message || "Internal server error",
     });
+  } finally {
+    // Always end the session
+    session.endSession();
   }
 };
 

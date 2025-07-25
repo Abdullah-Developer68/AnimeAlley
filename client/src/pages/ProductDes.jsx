@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-// import { addToCart } from "../redux/Slice/cartSlice";
 import { addToCartAsync } from "../redux/Thunk/cartThunks";
 import { Link } from "react-router-dom";
-import api from "../api/api";
 import assets from "../assets/asset";
 import { toast } from "react-toastify";
 
@@ -77,35 +75,8 @@ const ProductDescription = () => {
     }
   };
 
-  const checkStock = async (selectedVariant, itemQuantity) => {
-    try {
-      const res = await api.verifyStock(
-        selectedProduct.name,
-        selectedVariant,
-        itemQuantity
-      );
-      // update stock status
-      if (res.data.success) {
-        setStockStatus((prev) => ({
-          ...prev,
-          [selectedVariant]: {
-            stockAvailable: res.data.stockAvailable,
-            isAvailable: res.data.isAvailable,
-          },
-        }));
-        // if stock falls short set itemQuantity to max available
-        if (!res.data.isAvailable) {
-          toast.error(res.data.message);
-          setItemQuantity(Math.min(itemQuantity, res.data.stockAvailable));
-        }
-      }
-    } catch (error) {
-      console.error("Error checking stock:", error);
-    }
-  };
-
   //  add to cart
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     // Validate selections before adding to cart
     if (!selectedVariant && variantOptions.length > 0) {
       toast.error("Please select a variant");
@@ -115,32 +86,56 @@ const ProductDescription = () => {
       toast.error("Please select a valid quantity");
       return;
     }
-    // Check stock availability and if it falls short add to cart with max available stock
-    checkStock(selectedVariant, itemQuantity);
 
-    if (!stockStatus[selectedVariant]?.isAvailable) {
-      toast.error(
-        `Only ${
-          stockStatus[selectedVariant]?.stockAvailable || 0
-        } items available`
-      );
-      return;
+    try {
+      // All of the Checks are made in the cartThunk.js
+      const result = await dispatch(
+        addToCartAsync({
+          product: selectedProduct,
+          variant: selectedVariant,
+          quantity: itemQuantity,
+        })
+      ).unwrap();
+
+      // result is just the data object returned by cartThunk.js
+      setItemQuantity(0);
+      toast.success(result.message);
+
+      setStockStatus((prev) => ({
+        ...prev,
+        [selectedVariant]: {
+          stockAvailable: result.stock,
+          isAvailable: result.stock > 0,
+        },
+      }));
+
+      if (result.stock < 1) {
+        // Reset UI states
+        setSelectedVariant("");
+        setItemQuantity(0);
+      }
+    } catch (error) {
+      // structured error responses
+      if (error.type === "CONCURRENT_MODIFICATION") {
+        toast.warning("High demand! Please try again in a moment.", {
+          duration: 3000,
+        });
+      } else if (error.type === "OUT_OF_STOCK") {
+        toast.error("This item is out of stock");
+        setStockStatus((prev) => ({
+          ...prev,
+          [selectedVariant]: { stockAvailable: 0, isAvailable: false },
+        }));
+        // Reset UI states
+        setSelectedVariant("");
+        setItemQuantity(0);
+      } else {
+        toast.error(
+          error.message || "Failed to add to cart. Please try again."
+        );
+      }
+      setItemQuantity(0);
     }
-
-    dispatch(
-      addToCartAsync({
-        product: selectedProduct,
-        variant: selectedVariant,
-        quantity: itemQuantity,
-      })
-    )
-      .unwrap()
-      .then(() => {
-        toast.success("Added to cart successfully!");
-      })
-      .catch((err) => {
-        toast.error(err);
-      });
   };
 
   return (

@@ -28,11 +28,9 @@ const makNSenOTP = async (req, res) => {
     });
   } else {
     // If user exists
-    res
-      .status(409)
-      .json({
-        message: "Your account already exists, so you should just login!",
-      });
+    res.status(409).json({
+      message: "Your account already exists, so you should just login!",
+    });
   }
   await sendOTP(email, otp);
   res.status(200).json({ message: "OTP sent" });
@@ -130,7 +128,7 @@ const login = async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production", // true on Vercel
-      sameSite: "none", // or 'none' if cross-site, but then secure must be true
+      sameSite: "none", // 'none' if cross-site, but then secure must be true. "lax" if same-site
       path: "/",
       // domain: '.your-app.vercel.app', // set if using custom domain or subdomain
     });
@@ -140,7 +138,7 @@ const login = async (req, res) => {
       username: userExist.username,
       email: userExist.email,
       role: userExist.role,
-      // profilePic: userExist.profilePic,
+      profilePic: userExist.profilePic,
     };
     console.log(user);
     // Send login success response

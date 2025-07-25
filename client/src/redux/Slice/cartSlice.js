@@ -28,6 +28,7 @@ const initialState = {
   finalCost: localStorage.getItem("finalCost")
     ? Number(localStorage.getItem("finalCost"))
     : 0,
+  isLoading: false, // Loading state for cart operations
 };
 
 const cartSlice = createSlice({
@@ -134,6 +135,9 @@ const cartSlice = createSlice({
         localStorage.removeItem("cartTimestamp");
       }
     },
+    setCartLoading: (state, action) => {
+      state.isLoading = action.payload;
+    },
   },
 });
 
@@ -147,5 +151,6 @@ export const {
   resetCoupon,
   setFinalCost,
   checkAndExpireCart,
+  setCartLoading,
 } = cartSlice.actions;
 export default cartSlice.reducer;

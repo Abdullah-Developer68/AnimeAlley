@@ -5,6 +5,7 @@ import {
   applyCoupon,
   resetCoupon,
   setFinalCost,
+  setCartLoading,
 } from "../redux/Slice/cartSlice";
 import {
   decrementReservationStockAsync,
@@ -15,6 +16,7 @@ import StripeButton from "../components/Cart/StripeButton";
 import { useState, useEffect } from "react";
 import api from "../api/api";
 import { toast } from "react-toastify";
+import Loader from "../components/Global/Loader";
 
 const Cart = () => {
   // Redux setup
@@ -23,6 +25,7 @@ const Cart = () => {
   const couponApplied = useSelector((state) => state.cart.couponApplied);
   const couponCode = useSelector((state) => state.cart.couponCode);
   const finalCost = useSelector((state) => state.cart.finalCost);
+  const isLoading = useSelector((state) => state.cart.isLoading);
 
   // Constants
   const SHIPPING_COST = 5;
@@ -37,6 +40,7 @@ const Cart = () => {
   const [couponInput, setCouponInput] = useState(""); // Local state for coupon input
   const [couponDiscount, setCouponDiscount] = useState(0); // Store coupon discount percentage
   const [originalPrice, setOriginalPrice] = useState(0); // Store original price before discount
+  const [loadingItems, setLoadingItems] = useState(new Set()); // Track which items are being updated
 
   // Price calculations
   const calculateSubtotal = () => {
@@ -106,16 +110,28 @@ const Cart = () => {
     }
 
     try {
+      // Set loading state with a small delay to prevent flickering for fast API calls
+      const loadingTimer = setTimeout(() => {
+        dispatch(setCartLoading(true));
+      }, 200);
+
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       if (!userInfo) {
+        clearTimeout(loadingTimer);
+        dispatch(setCartLoading(false));
         toast.error("Please login to apply coupon");
         return;
       }
 
       const response = await api.verifyCouponCode(
         couponInput.trim(),
+        subtotal,
         userInfo.email
       );
+
+      // Clear the loading timer since API call completed
+      clearTimeout(loadingTimer);
+      dispatch(setCartLoading(false));
 
       if (response.success === false) {
         toast.error("Invalid coupon code");
@@ -145,39 +161,59 @@ const Cart = () => {
         toast.error("Invalid coupon code");
       }
     } catch (error) {
+      dispatch(setCartLoading(false));
       toast.error(error.response?.data?.message || "Error applying coupon");
     }
   };
 
   // Order placement
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!deliveryAddress.trim()) {
       toast.error("Please enter a delivery address");
       return;
     }
     try {
+      // Set loading state with a small delay to prevent flickering for fast API calls
+      const loadingTimer = setTimeout(() => {
+        dispatch(setCartLoading(true));
+      }, 200);
+
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      api.placeOrder(
+
+      // Calculate discounted price - if coupon applied, use the discounted subtotal, otherwise use original subtotal
+      const discountedPrice = couponApplied
+        ? subtotal * (1 - couponDiscount / 100)
+        : subtotal;
+
+      const res = await api.placeOrder(
         cartItems,
         couponCode,
         subtotal,
-        finalCost,
+        discountedPrice,
         SHIPPING_COST,
         finalCost,
         userInfo,
         deliveryAddress,
         paymentMethod,
-        getOrCreateCartId() // <-- returns an existing cartId otherwise creates a new one.
+        getOrCreateCartId() // gets or creates a cart ID
       );
 
-      // Reset states
-      dispatch(emptyCart());
-      dispatch(resetCoupon());
-      setPaymentMethod("cod");
+      // Clear the loading timer since API call completed
+      clearTimeout(loadingTimer);
+      dispatch(setCartLoading(false));
 
-      toast.success("Order placed successfully!");
+      if (res.data.success) {
+        toast.success("Order placed successfully!");
+        // Reset states
+        dispatch(emptyCart());
+        dispatch(resetCoupon());
+        setPaymentMethod("cod");
+      } else {
+        toast.error(res.data.message || "Failed to place order");
+      }
     } catch (error) {
       console.error(error);
+      dispatch(setCartLoading(false));
       toast.error(error.response?.data?.message || "Something went wrong");
     }
   };
@@ -198,63 +234,79 @@ const Cart = () => {
     );
   };
 
-  //verify Stock
-  const checkStock = async (item) => {
-    try {
-      // Always check if 1 more can be added, not the total
-      const res = await api.verifyStock(item.name, item.selectedVariant, 1);
-      if (res.data.success) {
-        if (!res.data.isAvailable) {
-          toast.error(res.data.message);
-          // Update the item quantity to maximum available
-          dispatch(
-            increaseQuantity({
-              id: item._id,
-              selectedVariant: item.selectedVariant,
-              newQuantity: res.data.stockAvailable,
-            })
-          );
-          return false;
-        }
-        return true;
-      }
-    } catch (error) {
-      console.error("Error checking stock:", error);
-      return false;
-    }
-  };
-
-  // Quantity handlers
+  // Quantity handlers with debouncing and loading states
   const handleIncreaseQuantity = async (item) => {
-    const canIncrease = await checkStock(item);
-    if (canIncrease) {
-      dispatch(
-        increaseQuantity({
+    const itemKey = `${item._id}-${item.selectedVariant}`;
+
+    // Prevent multiple simultaneous requests for the same item
+    if (loadingItems.has(itemKey)) {
+      return;
+    }
+
+    // Add item to loading state
+    setLoadingItems((prev) => new Set([...prev, itemKey]));
+
+    try {
+      await dispatch(
+        incrementReservationStockAsync({
           id: item._id,
-          selectedVariant: item.selectedVariant,
+          variant: item.selectedVariant,
         })
-      );
+      ).unwrap();
+    } catch (err) {
+      toast.error(err);
+    } finally {
+      // Remove item from loading state after request completes
+      setLoadingItems((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(itemKey);
+        return newSet;
+      });
     }
   };
 
-  const handleDecreaseQuantity = (item) => {
-    dispatch(
-      decrementReservationStockAsync({
-        id: item._id,
-        variant: item.selectedVariant,
-      })
-    )
-      .unwrap()
-      .catch((err) => {
-        toast.error(err);
+  const handleDecreaseQuantity = async (item) => {
+    const itemKey = `${item._id}-${item.selectedVariant}`;
+
+    // Prevent multiple simultaneous requests for the same item
+    if (loadingItems.has(itemKey)) {
+      return;
+    }
+
+    // Add item to loading state
+    setLoadingItems((prev) => new Set([...prev, itemKey]));
+
+    try {
+      await dispatch(
+        decrementReservationStockAsync({
+          id: item._id,
+          variant: item.selectedVariant,
+        })
+      ).unwrap();
+    } catch (err) {
+      toast.error(err);
+    } finally {
+      // Remove item from loading state after request completes
+      setLoadingItems((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(itemKey);
+        return newSet;
       });
+    }
   };
 
   // Render Component
   return (
     <>
       <div className="container mx-auto p-2 sm:p-4 md:p-8 mt-16">
-        <div className="flex flex-col lg:flex-row bg-gradient-to-b bg-black rounded-xl shadow-lg overflow-hidden min-h-screen lg:min-h-0">
+        <div className="flex flex-col lg:flex-row bg-gradient-to-b bg-black rounded-xl shadow-lg overflow-hidden min-h-screen lg:min-h-0 relative">
+          {/* Loading Overlay */}
+          {isLoading && (
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+              <Loader size="lg" />
+            </div>
+          )}
+
           {/* Left Section - Cart Items */}
           <div className="w-full lg:w-3/4 p-3 sm:p-4 md:p-8 flex flex-col max-h-[80vh] lg:max-h-[85vh]">
             {/* Cart Header */}
@@ -314,19 +366,45 @@ const Cart = () => {
                         <span className="text-white/60 text-sm">Quantity:</span>
                         <div className="flex items-center border border-white/20 rounded-lg overflow-hidden bg-black/40">
                           <button
-                            className="cursor-pointer px-4 py-2 text-white/90 hover:bg-pink-500/20 transition-colors"
+                            className={`px-4 py-2 text-white/90 hover:bg-pink-500/20 transition-colors ${
+                              loadingItems.has(
+                                `${item._id}-${item.selectedVariant}`
+                              )
+                                ? "opacity-50 cursor-not-allowed"
+                                : "cursor-pointer"
+                            }`}
                             onClick={() => handleDecreaseQuantity(item)}
+                            disabled={loadingItems.has(
+                              `${item._id}-${item.selectedVariant}`
+                            )}
                           >
-                            -
+                            {loadingItems.has(
+                              `${item._id}-${item.selectedVariant}`
+                            )
+                              ? "..."
+                              : "-"}
                           </button>
                           <span className="w-12 text-center text-white font-medium">
                             {item.itemQuantity}
                           </span>
                           <button
-                            className="cursor-pointer px-4 py-2 text-white/90 hover:bg-pink-500/20 transition-colors"
+                            className={`px-4 py-2 text-white/90 hover:bg-pink-500/20 transition-colors ${
+                              loadingItems.has(
+                                `${item._id}-${item.selectedVariant}`
+                              )
+                                ? "opacity-50 cursor-not-allowed"
+                                : "cursor-pointer"
+                            }`}
                             onClick={() => handleIncreaseQuantity(item)}
+                            disabled={loadingItems.has(
+                              `${item._id}-${item.selectedVariant}`
+                            )}
                           >
-                            +
+                            {loadingItems.has(
+                              `${item._id}-${item.selectedVariant}`
+                            )
+                              ? "..."
+                              : "+"}
                           </button>
                         </div>
                       </div>

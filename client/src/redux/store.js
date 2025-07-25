@@ -3,6 +3,7 @@ import shopReducer from "./Slice/shopSlice";
 import cartReducer from "./Slice/cartSlice";
 import dashboardReducer from "./Slice/DashboardSlice";
 import homeReducer from "./Slice/homeSlice";
+import userHistoryReducer from "./Slice/userHistorySlice";
 
 const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ const store = configureStore({
     cart: cartReducer,
     dashboard: dashboardReducer,
     home: homeReducer,
+    userHistory: userHistoryReducer,
   },
 });
 

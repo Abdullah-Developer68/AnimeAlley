@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // axios automatically sets the headers content type for api requests
-const serverURL = import.meta.env.VITE_API_BASE_URL;
+const serverURL = "http://localhost:3000" || import.meta.env.VITE_API_BASE_URL;
 const api = axios.create({
   baseURL: `${serverURL}/api`,
   withCredentials: true, // tells the browser to send cookies, authorization headers or TLS client certificates when making a CORS.
@@ -69,11 +69,10 @@ api.placeOrder = (
   cartId
 ) => {
   return api.post("/order/placeOrder", {
-    cartItems,
     couponCode,
     subtotal,
     discountedPrice,
-    SHIPPING_COST,
+    shippingCost: SHIPPING_COST,
     finalCost,
     userInfo,
     deliveryAddress,
@@ -187,10 +186,6 @@ api.reserveStock = (cartId, productId, variant, quantity) => {
   return api.post("/reserveStock", { cartId, productId, variant, quantity });
 };
 
-api.releaseStock = (cartId, productId, variant, quantity) => {
-  return api.post("/releaseStock", { cartId, productId, variant, quantity });
-};
-
 api.decrementReservationStock = (cartId, productId, variant, quantity) => {
   return api.post("/decrementReservationStock", {
     cartId,
@@ -208,7 +203,8 @@ api.createCheckOutSession = (
   originalTotal,
   finalTotal,
   discountAmount,
-  deliveryAddress
+  deliveryAddress,
+  shippingCost
 ) => {
   return api.post("/stripe/create-checkout-session", {
     cartId,
@@ -218,6 +214,7 @@ api.createCheckOutSession = (
     finalTotal,
     discountAmount,
     deliveryAddress,
+    shippingCost,
   });
 };
 export default api;

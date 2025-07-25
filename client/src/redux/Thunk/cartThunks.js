@@ -21,20 +21,43 @@ export const addToCartAsync = createAsyncThunk(
         variant,
         quantity
       );
+
       if (res.data.success) {
         dispatch(
           addToCart({
             ...product,
             selectedVariant: variant,
-            itemQuantity: quantity,
+            itemQuantity: res.data.reservedQuantity || quantity, // Use actual reserved quantity
           })
         );
-        return true;
+        // returns data and tells unwrap that thunk succeded
+        return res.data;
       } else {
-        return rejectWithValue(res.data.message || "Failed to reserve stock");
+        // Handle different error types with stock info
+        if (res.data.stock === -1) {
+          return rejectWithValue({
+            message: res.data.message,
+            type: "CONCURRENT_MODIFICATION",
+            stock: -1,
+          });
+        } else if (res.data.stock === 0) {
+          return rejectWithValue({
+            message: res.data.message,
+            type: "OUT_OF_STOCK",
+            stock: 0,
+          });
+        } else {
+          return rejectWithValue({
+            message: res.data.message || "Failed to reserve stock",
+            type: "GENERAL_ERROR",
+          });
+        }
       }
     } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Server error");
+      return rejectWithValue({
+        message: err.response?.data?.message || "Server error",
+        type: "NETWORK_ERROR",
+      });
     }
   }
 );

@@ -1,15 +1,23 @@
 import { useEffect, useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { setHistoryLoading } from "../redux/Slice/userHistorySlice";
 import api from "../api/api";
 import assets from "../assets/asset.js";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import Loader from "../components/Global/Loader";
 
 const UserHistory = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  // Local state for data (not shared across components)
   const [purchaseHistory, setPurchaseHistory] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  // Redux state only for loading (shared with Loader component)
+  const isLoading = useSelector((state) => state.userHistory.isLoading);
 
   const getUserInfo = () => {
     try {
@@ -31,16 +39,27 @@ const UserHistory = () => {
 
   const fetchOrders = async () => {
     try {
-      setIsLoading(true);
+      // Set loading state with a small delay to prevent flickering for fast API calls
+      const loadingTimer = setTimeout(() => {
+        dispatch(setHistoryLoading(true));
+      }, 200);
+
       const userInfo = getUserInfo();
 
       if (!userInfo) {
+        clearTimeout(loadingTimer);
+        dispatch(setHistoryLoading(false));
         toast.error("Please login to view your order history");
         navigate("/login");
         return;
       }
 
       const res = await api.getOrderHistory(userInfo, currentPage);
+
+      // Clear the loading timer since API call completed
+      clearTimeout(loadingTimer);
+      dispatch(setHistoryLoading(false));
+
       if (res.status === 200) {
         setPurchaseHistory(res.data.paginatedOrders);
         setTotalPages(res.data.totalPages);
@@ -49,12 +68,11 @@ const UserHistory = () => {
       }
     } catch (error) {
       console.error("Error fetching orders:", error);
+      dispatch(setHistoryLoading(false));
       if (error.response?.status === 401) {
         toast.error("Please login to view your order history");
         navigate("/login");
       }
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -116,12 +134,13 @@ const UserHistory = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // We only need to run this once on mount
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
-        <div className="text-white">Loading...</div>
+        <Loader size="lg" />
       </div>
     );
   }

@@ -11,9 +11,7 @@ const app = express();
 // Stripe webhook must be registered before any body parser middleware because Stripe webhooks
 // must use raw body parsing while regular API routes use JSON body parsing to handle requests
 //  and so that is why it is not in strip.routes.js
-const {
-  handleStripeWebhook,
-} = require("./controllers/stripeWebHook.controller.js");
+const { handleStripeWebhook } = require("./hooks/stripeWebHook.js");
 
 app.post(
   "/api/stripe/webhook",
@@ -23,7 +21,10 @@ app.post(
 
 // Import middlewares and executes them
 require("./middlewares/index.middleware.js")(app);
-require("./utils/cleanUp.js"); // automaically cleans unverified users that were created a Week Ago
+
+// Automatic clean up scripts using cron
+require("./utils/cleanUpUsers.js"); // automaically cleans unverified users that were created a Week Ago
+require("./utils/cleanUpReservation.js"); // automatically cleans up expired reservations
 
 // Custom middlewares
 app.use(passport.initialize());

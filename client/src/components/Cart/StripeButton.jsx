@@ -12,12 +12,12 @@ const StripeButton = () => {
   const cartItems = useSelector((state) => state.cart.cartItems);
 
   // Calculate original price (subtotal + shipping)
-  const SHIPPING_COST = 99;
+  const shippingCost = 5;
   const subtotal = cartItems.reduce(
     (total, item) => total + item.price * item.itemQuantity,
     0
   );
-  const originalTotal = subtotal + SHIPPING_COST;
+  const originalTotal = subtotal + shippingCost;
   const discountAmount = originalTotal - finalCost;
 
   // Get user info and delivery address from localStorage
@@ -38,7 +38,8 @@ const StripeButton = () => {
         originalTotal,
         finalCost,
         discountAmount,
-        deliveryAddress
+        deliveryAddress,
+        shippingCost
       );
       const { sessionId } = res.data;
 
