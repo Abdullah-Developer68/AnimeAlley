@@ -60,7 +60,7 @@ const EditUser = () => {
       });
       setPreviewPic(
         selectedUser.profilePic
-          ? `http://localhost:3000/api/uploads/${selectedUser.profilePic}`
+          ? `${selectedUser.profilePic}`
           : selectedUser.profilePic === undefined &&
             selectedUser.googleId &&
             selectedUser.profilePic
