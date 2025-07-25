@@ -1,7 +1,8 @@
 import axios from "axios";
 
 // axios automatically sets the headers content type for api requests
-const serverURL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+// const serverURL = import.meta.env.VITE_API_BASE_URL; -> production
+const serverURL = "http://localhost:3000";
 const api = axios.create({
   baseURL: `${serverURL}/api`,
   withCredentials: true, // tells the browser to send cookies, authorization headers or TLS client certificates when making a CORS.

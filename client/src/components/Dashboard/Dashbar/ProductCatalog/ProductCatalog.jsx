@@ -23,7 +23,7 @@ const ProductCatalog = () => {
       sortBy: "popular",
       searchQuery: "",
       minPrice: 0,
-      maxPrice: 2000, // max price is 2000 for the range input
+      maxPrice: 100, // max price is 100 for the range input
       currProductType: "All",
       productTypes: ["all"], // default to "all" for product types
     },
@@ -162,7 +162,7 @@ const ProductCatalog = () => {
 
   //Custom background styling for range input based on current price
   const getBackgroundStyle = (value) => {
-    const percentage = (value / 2000) * 100;
+    const percentage = (value / formFields.maxPrice) * 100;
     return {
       background: `linear-gradient(to right, #EAB308 ${percentage}%, rgba(255, 255, 255, 0.1) ${percentage}%)`,
     };
@@ -258,9 +258,9 @@ const ProductCatalog = () => {
             className="w-full h-2 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-yellow-500 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white mb-4"
           />
           <div className="flex justify-between text-white/70 text-sm">
-            <span>0 $</span>
+            <span>{formFields.minPrice} $</span>
             <span>{formFields.price} $</span>
-            <span>2000 $</span>
+            <span>{formFields.maxPrice} $</span>
           </div>
         </div>
         <div className="flex flex-col sm:flex-row gap-4">

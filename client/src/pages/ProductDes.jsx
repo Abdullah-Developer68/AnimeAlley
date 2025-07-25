@@ -166,7 +166,7 @@ const ProductDescription = () => {
               <img
                 src={`${selectedProduct.image}`}
                 alt={selectedProduct.name}
-                className="w-full h-full object-cover hover:scale-105 transition-transform duration-500 rounded-lg"
+                className="w-full h-full object-contain hover:scale-105 transition-transform duration-500 rounded-lg"
               />
             </div>
           </div>

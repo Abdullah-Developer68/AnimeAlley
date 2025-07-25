@@ -143,16 +143,29 @@ const ProductForm = () => {
   const availableSizes = watch("availableSizes") || [];
   const volumes = watch("volumes") || "";
 
-  // Capitalize Volumes input as user types
+  // Capitalize Volumes input as user types and validate format
   const handleVolumesChange = (e) => {
     let value = e.target.value;
-    // Transform each entry to start with capital V
-    value = value
-      .split(",")
-      .map((v) => v.trim().replace(/^v(\d+)$/i, "V$1"))
-      .filter((v) => v.length > 0)
-      .join(", ");
-    setValue("volumes", value, { shouldValidate: true });
+
+    // Split by comma and process each volume
+    const volumes = value.split(",").map((v) => v.trim());
+    const processedVolumes = [];
+
+    volumes.forEach((volume) => {
+      if (volume === "") return; // Skip empty entries
+
+      // Check if it matches the pattern (v or V followed by numbers)
+      const match = volume.match(/^[vV](\d+)$/);
+      if (match) {
+        processedVolumes.push(`V${match[1]}`);
+      } else if (volume !== "") {
+        // If it doesn't match and isn't empty, keep original to show error
+        processedVolumes.push(volume);
+      }
+    });
+
+    const finalValue = processedVolumes.join(", ");
+    setValue("volumes", finalValue, { shouldValidate: true });
   };
 
   // Track initial category to prevent clearing on first load
@@ -505,32 +518,34 @@ const ProductForm = () => {
                           </div>
                         ) : (
                           <div className="space-y-2 max-h-32 overflow-y-auto">
-                            {availableSizes.map((size) => (
-                              <div
-                                key={size}
-                                className="flex items-center gap-2"
-                              >
-                                <span className="text-white/70 text-xs min-w-[50px]">
-                                  {size}:
-                                </span>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  className="flex-1 px-2 py-1 bg-white/5 border border-white/10 rounded text-white placeholder:text-white/50 focus:outline-none focus:border-pink-500 text-sm"
-                                  placeholder={`Stock`}
-                                  {...register(`stock_${size}`, {
-                                    required: `Stock for Size ${size} is required!`,
-                                    min: {
-                                      value: 0,
-                                      message: "Stock cannot be negative",
-                                    },
-                                    validate: (value) =>
-                                      !isNaN(parseInt(value)) ||
-                                      "Must be a valid number",
-                                  })}
-                                />
-                              </div>
-                            ))}
+                            {["XS", "S", "M", "L", "XL", "XXL"]
+                              .filter((size) => availableSizes.includes(size))
+                              .map((size) => (
+                                <div
+                                  key={size}
+                                  className="flex items-center gap-2"
+                                >
+                                  <span className="text-white hover:text-black hover:bg-white text-xs min-w-[50px]">
+                                    {size}:
+                                  </span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    className="flex-1 px-2 py-1 bg-white/5 border border-white/10 rounded text-white placeholder:text-white/50 focus:outline-none focus:border-pink-500 text-sm"
+                                    placeholder={`Stock`}
+                                    {...register(`stock_${size}`, {
+                                      required: `Stock for Size ${size} is required!`,
+                                      min: {
+                                        value: 0,
+                                        message: "Stock cannot be negative",
+                                      },
+                                      validate: (value) =>
+                                        !isNaN(parseInt(value)) ||
+                                        "Must be a valid number",
+                                    })}
+                                  />
+                                </div>
+                              ))}
                           </div>
                         )}
                       </>
@@ -575,19 +590,60 @@ const ProductForm = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-400 mb-1">
-                        Genre
+                        Genres
                       </label>
-                      <input
-                        type="text"
-                        className="w-full px-3 sm:px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-white/50 focus:outline-none focus:border-pink-500 text-sm sm:text-base"
-                        placeholder="Enter genre (comma seperated)"
-                        {...register("genres", {
-                          validate: (value) =>
-                            selectedCategory !== "comics" ||
-                            value.trim() !== "" ||
-                            "At lease one genre is required!",
-                        })}
-                      />
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          "Action",
+                          "Adventure",
+                          "Comedy",
+                          "Drama",
+                          "Fantasy",
+                        ].map((genre) => (
+                          <label
+                            key={genre}
+                            className={`inline-flex items-center px-3 py-1 rounded-full border border-white/10 cursor-pointer hover:bg-white hover:text-black transition-colors text-sm ${
+                              watch("genres")
+                                ?.split(",")
+                                .map((g) => g.trim())
+                                .includes(genre)
+                                ? "bg-pink-500 text-black"
+                                : "bg-white/5 text-white"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              value={genre}
+                              className="sr-only"
+                              checked={
+                                watch("genres")
+                                  ?.split(",")
+                                  .map((g) => g.trim())
+                                  .includes(genre) || false
+                              }
+                              onChange={(e) => {
+                                const currentGenres =
+                                  watch("genres")
+                                    ?.split(",")
+                                    .map((g) => g.trim())
+                                    .filter((g) => g) || [];
+                                let newGenres;
+                                if (e.target.checked) {
+                                  newGenres = [...currentGenres, genre];
+                                } else {
+                                  newGenres = currentGenres.filter(
+                                    (g) => g !== genre
+                                  );
+                                }
+                                setValue("genres", newGenres.join(", "), {
+                                  shouldValidate: true,
+                                });
+                              }}
+                            />
+                            <span>{genre}</span>
+                          </label>
+                        ))}
+                      </div>
                       {errors.genres && (
                         <span className="text-red-500 text-xs mt-1 block">
                           {errors.genres.message}
@@ -607,11 +663,29 @@ const ProductForm = () => {
                             if (selectedCategory !== "comics") return true;
                             if (value.trim() === "")
                               return "Volume numbers are required for comics";
-                            // Validate format: V followed by number, comma separated
-                            const parts = value.split(",").map((v) => v.trim());
-                            const valid = parts.every((v) => /^V\d+$/.test(v));
-                            if (!valid)
-                              return "Format must be V1, V2, V10, ... (e.g. V1, V2, V10)";
+
+                            // Split by comma and validate each volume
+                            const volumes = value
+                              .split(",")
+                              .map((v) => v.trim())
+                              .filter((v) => v !== "");
+
+                            // Check if all volumes match the V+number format
+                            const invalidVolumes = volumes.filter(
+                              (v) => !/^V\d+$/.test(v)
+                            );
+                            if (invalidVolumes.length > 0) {
+                              return `Invalid format: "${invalidVolumes.join(
+                                ", "
+                              )}". Use format: V1, V2, V10, etc.`;
+                            }
+
+                            // Check for duplicates
+                            const uniqueVolumes = [...new Set(volumes)];
+                            if (uniqueVolumes.length !== volumes.length) {
+                              return "Duplicate volume numbers are not allowed";
+                            }
+
                             return true;
                           },
                         })}
@@ -643,9 +717,9 @@ const ProductForm = () => {
                       {["XS", "S", "M", "L", "XL", "XXL"].map((size) => (
                         <label
                           key={size}
-                          className={`inline-flex items-center px-3 py-1 rounded-full border border-white/10 cursor-pointer hover:bg-white/10 transition-colors text-sm ${
+                          className={`inline-flex items-center px-3 py-1 rounded-full border border-white/10 cursor-pointer hover:bg-white hover:text-black transition-colors text-sm ${
                             availableSizes.includes(size)
-                              ? "bg-pink-500 text-white"
+                              ? "bg-pink-500 text-black"
                               : "bg-white/5 text-white"
                           }`}
                         >
@@ -682,36 +756,50 @@ const ProductForm = () => {
                       <option className="bg-black text-white" value="">
                         Select Type
                       </option>
-                      <option
-                        className="bg-gray-800 text-gray-300"
-                        value="t-shirt"
-                      >
-                        T-Shirt
-                      </option>
-                      <option
-                        className="bg-gray-800 text-gray-300"
-                        value="hoodie"
-                      >
-                        Hoodie
-                      </option>
-                      <option
-                        className="bg-gray-800 text-gray-300"
-                        value="jacket"
-                      >
-                        Jacket
-                      </option>
-                      <option
-                        className="bg-gray-800 text-gray-300"
-                        value="sneakers"
-                      >
-                        Sneakers
-                      </option>
-                      <option
-                        className="bg-gray-800 text-gray-300"
-                        value="boots"
-                      >
-                        Boots
-                      </option>
+                      {selectedCategory === "clothes" && (
+                        <>
+                          <option
+                            className="bg-gray-800 text-gray-300"
+                            value="t-shirt"
+                          >
+                            T-Shirt
+                          </option>
+                          <option
+                            className="bg-gray-800 text-gray-300"
+                            value="hoodie"
+                          >
+                            Hoodie
+                          </option>
+                          <option
+                            className="bg-gray-800 text-gray-300"
+                            value="jacket"
+                          >
+                            Jacket
+                          </option>
+                          <option
+                            className="bg-gray-800 text-gray-300"
+                            value="pants"
+                          >
+                            Pants
+                          </option>
+                        </>
+                      )}
+                      {selectedCategory === "shoes" && (
+                        <>
+                          <option
+                            className="bg-gray-800 text-gray-300"
+                            value="sneakers"
+                          >
+                            Sneakers
+                          </option>
+                          <option
+                            className="bg-gray-800 text-gray-300"
+                            value="boots"
+                          >
+                            Boots
+                          </option>
+                        </>
+                      )}
                     </select>
                     {errors.merchandiseType && (
                       <span className="text-red-500 text-xs mt-1 block">
@@ -830,7 +918,7 @@ const ProductForm = () => {
                       <div className="mt-4">
                         <img
                           src={previewImage}
-                          className="w-full max-h-48 object-cover rounded-lg border border-white/20"
+                          className="w-full max-h-48 object-contain rounded-lg border border-white/20"
                           alt="Preview"
                         />
                         <p className="text-green-400 text-xs mt-2">
