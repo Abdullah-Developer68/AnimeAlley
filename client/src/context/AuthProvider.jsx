@@ -23,7 +23,7 @@ const AuthProvider = ({ children }) => {
       }
 
       // If JWT verification fails, try Google auth
-      const googleRes = await api.get("/googleAuth/success");
+      const googleRes = await api.googleAuthSuccess();
       console.log("Google login response:", googleRes.data);
       if (googleRes.data.success) {
         setUser(googleRes.data.user);
