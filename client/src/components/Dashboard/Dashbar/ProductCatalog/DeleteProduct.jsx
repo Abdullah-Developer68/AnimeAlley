@@ -180,7 +180,7 @@ const DeleteProduct = () => {
         <div className="flex gap-3">
           <button
             onClick={handleClose}
-            className="flex-1 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white transition-colors"
+            className="flex-1 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white transition-colors cursor-pointer"
             disabled={isDeleting}
           >
             Cancel
@@ -192,7 +192,7 @@ const DeleteProduct = () => {
               !productId.trim() ||
               productId !== selectedProduct.productID
             }
-            className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:bg-red-500/50 disabled:cursor-not-allowed rounded-lg text-white font-medium transition-colors"
+            className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:bg-red-500/50 disabled:cursor-not-allowed rounded-lg text-white font-medium transition-colors cursor-pointer"
           >
             {isDeleting ? "Deleting..." : "Delete Product"}
           </button>

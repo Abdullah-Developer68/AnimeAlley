@@ -142,7 +142,7 @@ const DeleteCoupon = () => {
           <button
             onClick={handleDelete}
             disabled={isDeleting || confirmText !== "CONFIRM"}
-            className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:bg-red-500/50 disabled:cursor-not-allowed rounded-lg text-white font-medium transition-colors"
+            className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:bg-red-500/50 disabled:cursor-not-allowed rounded-lg text-white font-medium transition-colors cursor-pointer"
           >
             {isDeleting ? "Deleting..." : "Delete Coupon"}
           </button>
