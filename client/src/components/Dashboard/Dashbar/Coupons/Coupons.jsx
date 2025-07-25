@@ -201,6 +201,9 @@ const Coupons = () => {
             <thead className="bg-black/50 backdrop-blur-sm sticky top-0 z-10">
               <tr className="border-b border-white/10">
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">
+                  Actions
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">
                   Code
                 </th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">
@@ -211,9 +214,6 @@ const Coupons = () => {
                 </th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">
                   Status
-                </th>
-                <th className="px-6 py-4 text-right text-sm font-medium text-gray-400">
-                  Actions
                 </th>
               </tr>
             </thead>
@@ -242,28 +242,8 @@ const Coupons = () => {
                     key={coupon._id}
                     className="hover:bg-white/5 transition-colors"
                   >
-                    <td className="px-6 py-4 text-sm font-medium text-white">
-                      {coupon.couponCode}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-white">
-                      {coupon.discountPercentage}%
-                    </td>
-                    <td className="px-6 py-4 text-sm text-white">
-                      {formatDate(coupon.expiryDate)}
-                    </td>
                     <td className="px-6 py-4">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          getStatus(coupon.expiryDate) === "Active"
-                            ? "bg-green-500/20 text-green-500"
-                            : "bg-red-500/20 text-red-500"
-                        }`}
-                      >
-                        {getStatus(coupon.expiryDate)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-start gap-2">
                         <button
                           className="w-10 h-10 flex items-center justify-center p-2 hover:bg-white/10 rounded-lg transition-colors"
                           title="Edit"
@@ -287,6 +267,26 @@ const Coupons = () => {
                           />
                         </button>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium text-white">
+                      {coupon.couponCode}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-white">
+                      {coupon.discountPercentage}%
+                    </td>
+                    <td className="px-6 py-4 text-sm text-white">
+                      {formatDate(coupon.expiryDate)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          getStatus(coupon.expiryDate) === "Active"
+                            ? "bg-green-500/20 text-green-500"
+                            : "bg-red-500/20 text-red-500"
+                        }`}
+                      >
+                        {getStatus(coupon.expiryDate)}
+                      </span>
                     </td>
                   </tr>
                 ))

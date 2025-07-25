@@ -210,6 +210,9 @@ const Orders = () => {
             <thead className="bg-black/50 backdrop-blur-sm sticky top-0 z-10">
               <tr className="border-b border-white/10">
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">
+                  Actions
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">
                   Order ID
                 </th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">
@@ -229,9 +232,6 @@ const Orders = () => {
                 </th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">
                   Status
-                </th>
-                <th className="px-6 py-4 text-right text-sm font-medium text-gray-400">
-                  Actions
                 </th>
               </tr>
             </thead>
@@ -269,6 +269,32 @@ const Orders = () => {
                     key={order._id}
                     className="hover:bg-white/5 transition-colors"
                   >
+                    <td className="px-6 py-4">
+                      <div className="flex justify-start gap-2">
+                        <button
+                          className="w-10 h-10 flex items-center justify-center p-2 hover:bg-white/10 rounded-lg transition-colors"
+                          title="Edit"
+                          onClick={() => dispatch(openOrderEditModal(order))}
+                        >
+                          <img
+                            src={assets.edit}
+                            className="w-5 h-5 cursor-pointer"
+                            alt="Edit"
+                          />
+                        </button>
+                        <button
+                          className="w-10 h-10 flex items-center justify-center p-2 hover:bg-white/10 rounded-lg transition-colors"
+                          title="Delete"
+                          onClick={() => dispatch(openOrderDeleteModal(order))}
+                        >
+                          <img
+                            src={assets.deleteIcon}
+                            className="w-5 h-5 cursor-pointer"
+                            alt="Delete"
+                          />
+                        </button>
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-white font-medium">
                       {order.orderID}
                     </td>
@@ -319,32 +345,6 @@ const Orders = () => {
                         {order.status?.charAt(0).toUpperCase() +
                           order.status?.slice(1)}
                       </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          className="w-10 h-10 flex items-center justify-center p-2 hover:bg-white/10 rounded-lg transition-colors"
-                          title="Edit"
-                          onClick={() => dispatch(openOrderEditModal(order))}
-                        >
-                          <img
-                            src={assets.edit}
-                            className="w-5 h-5 cursor-pointer"
-                            alt="Edit"
-                          />
-                        </button>
-                        <button
-                          className="w-10 h-10 flex items-center justify-center p-2 hover:bg-white/10 rounded-lg transition-colors"
-                          title="Delete"
-                          onClick={() => dispatch(openOrderDeleteModal(order))}
-                        >
-                          <img
-                            src={assets.deleteIcon}
-                            className="w-5 h-5 cursor-pointer"
-                            alt="Delete"
-                          />
-                        </button>
-                      </div>
                     </td>
                   </tr>
                 ))

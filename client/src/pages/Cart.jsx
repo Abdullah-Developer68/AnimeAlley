@@ -125,7 +125,6 @@ const Cart = () => {
 
       const response = await api.verifyCouponCode(
         couponInput.trim(),
-        subtotal,
         userInfo.email
       );
 
@@ -186,7 +185,6 @@ const Cart = () => {
         : subtotal;
 
       const res = await api.placeOrder(
-        cartItems,
         couponCode,
         subtotal,
         discountedPrice,

@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // axios automatically sets the headers content type for api requests
-const serverURL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+const serverURL = "http://localhost:3000" || import.meta.env.VITE_API_BASE_URL;
 const api = axios.create({
   baseURL: `${serverURL}/api`,
   withCredentials: true, // tells the browser to send cookies, authorization headers or TLS client certificates when making a CORS.
@@ -57,7 +57,6 @@ api.verifyStock = (itemName, selectedVariant, itemQuantity) => {
 // --- ORDER API'S ---
 
 api.placeOrder = (
-  cartItems,
   couponCode,
   subtotal,
   discountedPrice,

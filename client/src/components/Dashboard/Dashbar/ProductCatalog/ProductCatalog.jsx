@@ -352,6 +352,12 @@ const ProductCatalog = () => {
               <tr className="border-b border-white/10">
                 <th
                   scope="col"
+                  className="w-[15%] px-6 py-4 text-left text-sm font-medium text-gray-400"
+                >
+                  Actions
+                </th>
+                <th
+                  scope="col"
                   className="w-[25%] px-6 py-4 text-left text-sm font-medium text-gray-400"
                 >
                   Product
@@ -374,18 +380,45 @@ const ProductCatalog = () => {
                 >
                   Stock Status
                 </th>
-                <th
-                  scope="col"
-                  className="w-[15%] px-6 py-4 text-right text-sm font-medium text-gray-400"
-                >
-                  Actions
-                </th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-white/10">
               {products.map((product, index) => (
                 <tr key={index} className="hover:bg-white/5 transition-colors">
+                  {/* Edit & Delete buttons*/}
+                  <td className="px-6 py-4">
+                    <div className="flex justify-start gap-2">
+                      <button
+                        className="w-10 h-10 flex items-center justify-center p-2 hover:bg-white/10 rounded-lg transition-colors group"
+                        title="Edit"
+                        onClick={() => {
+                          openForm(product);
+                        }}
+                      >
+                        <img
+                          src={assets.edit}
+                          className="w-5 h-5 cursor-pointer"
+                          alt="Edit"
+                        />
+                      </button>
+                      <button
+                        className="w-10 h-10 flex items-center justify-center p-2 hover:bg-white/10 rounded-lg transition-colors group cursor-pointer"
+                        title="Delete"
+                        onClick={() => {
+                          handleDeleteModal(product);
+                        }}
+                      >
+                        <img
+                          src={assets.deleteIcon}
+                          className="w-5 h-5 cursor-pointer"
+                          alt="Delete"
+                        />
+                      </button>
+
+                      {productDeleteModalState.isOpen && <DeleteProduct />}
+                    </div>
+                  </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <img
@@ -448,39 +481,6 @@ const ProductCatalog = () => {
                           )
                         )
                       )}
-                    </div>
-                  </td>
-                  {/* Edit & Delete buttons*/}
-                  <td className="px-6 py-4">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        className="w-10 h-10 flex items-center justify-center p-2 hover:bg-white/10 rounded-lg transition-colors group"
-                        title="Edit"
-                        onClick={() => {
-                          openForm(product);
-                        }}
-                      >
-                        <img
-                          src={assets.edit}
-                          className="w-5 h-5 cursor-pointer"
-                          alt="Edit"
-                        />
-                      </button>
-                      <button
-                        className="w-10 h-10 flex items-center justify-center p-2 hover:bg-white/10 rounded-lg transition-colors group cursor-pointer"
-                        title="Delete"
-                        onClick={() => {
-                          handleDeleteModal(product);
-                        }}
-                      >
-                        <img
-                          src={assets.deleteIcon}
-                          className="w-5 h-5 cursor-pointer"
-                          alt="Delete"
-                        />
-                      </button>
-
-                      {productDeleteModalState.isOpen && <DeleteProduct />}
                     </div>
                   </td>
                 </tr>
