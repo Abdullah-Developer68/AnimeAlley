@@ -15,7 +15,7 @@ const AuthProvider = ({ children }) => {
   const checkAuthStatus = async () => {
     try {
       // First try verifying JWT token works for both normal and Google auth
-      const res = await api.get("/auth/verify");
+      const res = await api.googleAuthVerify();
       if (res.data.success) {
         setUser(res.data.user);
         localStorage.setItem("userInfo", JSON.stringify(res.data.user));

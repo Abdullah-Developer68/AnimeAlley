@@ -1,10 +1,4 @@
-import axios froapi.googleLogout = () => {
-  window.location.href = `${serverURL}/api/googleAuth/logout`;
-};
-// used in auth provider to check if user is logged in with google
-api.googleAuthSuccess = () => {
-  return api.get("/googleAuth/success");
-};
+import axios from "axios";
 
 // axios automatically sets the headers content type for api requests
 // const serverURL = import.meta.env.VITE_API_BASE_URL; -> production
