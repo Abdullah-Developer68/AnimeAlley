@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   closeUserEditModal,
   setReloadData,
+  setUpdatedProfilePic,
 } from "../../../../redux/Slice/DashboardSlice";
 import useAuth from "../../../../Hooks/UseAuth";
 import api from "../../../../api/api";
@@ -20,7 +21,7 @@ const EditUser = () => {
   const { isOpen, selectedUser } = useSelector(
     (state) => state.dashboard.userEditFormState
   );
-  const { user } = useAuth();
+  const { user } = useAuth(); // Get user from the auth context
   const editor = user || {}; // Fallback to empty object if user is not available
   const [selectedUserRole, setSelectedUserRole] = useState("");
   const [roleDropdownOptions, setRoleDropdownOptions] = useState(roleOptions);
@@ -127,11 +128,19 @@ const EditUser = () => {
     setError("");
     try {
       const payload = { ...data };
-      if (profilePic) payload.profilePic = profilePic;
+      if (profilePic) {
+        payload.profilePic = profilePic;
+      }
       payload.editorEmail = editor.email;
       const res = await api.updateUser(selectedUser._id, payload);
       if (res.data.success) {
         toast.success("User updated successfully!");
+
+        // If the editor is updating their own profile, dispatch the updated profile picture
+        if (editor.id === selectedUser._id) {
+          dispatch(setUpdatedProfilePic(res.data.user.profilePic));
+        }
+
         dispatch(setReloadData("users"));
         // Reset states before closing
         setProfilePic(null);

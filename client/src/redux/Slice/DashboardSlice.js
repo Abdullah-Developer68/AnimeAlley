@@ -14,6 +14,7 @@ function loadModalState() {
 // default state of the dashboard slice
 const initialState = {
   reloadData: null, // Can be 'products', 'users', 'orders', etc.
+  updatedProfilePic: null, // Store updated profile picture URL
   productDeleteModalState: {
     isOpen: false,
     selectedProduct: null,
@@ -163,8 +164,16 @@ const dashboardSlice = createSlice({
     closeSidebar: (state) => {
       state.isSidebarOpen = false;
     },
-    toggleSidebar: (state) => {
+    toggleSidebar(state) {
       state.isSidebarOpen = !state.isSidebarOpen;
+    },
+    // Set updated profile picture
+    setUpdatedProfilePic: (state, action) => {
+      state.updatedProfilePic = action.payload;
+    },
+    // Clear updated profile picture
+    clearUpdatedProfilePic: (state) => {
+      state.updatedProfilePic = null;
     },
   },
 });
@@ -194,6 +203,8 @@ export const persistDashboardModalState = (state) => {
 
 export const {
   setReloadData,
+  setUpdatedProfilePic,
+  clearUpdatedProfilePic,
   openProductDeleteModal,
   closeProductDeleteModal,
   openUserDeleteModal,

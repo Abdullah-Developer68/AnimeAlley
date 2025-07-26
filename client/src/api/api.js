@@ -21,17 +21,15 @@ api.googleLogin = () => {
 api.googleLogout = () => {
   window.location.href = `${serverURL}/api/googleAuth/logout`;
 };
-api.googleAuthVerify = () => {
-  return api.get("/auth/verify"); // Use relative path with axios baseURL
+// verifies JWT tokens for both local and google auth
+api.verifyAuth = () => {
+  return api.get("/auth/verify");
 };
 // used in auth provider to check if user is logged in with google
 api.googleAuthSuccess = () => {
   return api.get("/googleAuth/success");
 };
-// LOCAL AUTH
-api.verifyAuth = () => {
-  return api.get("/auth/verify");
-};
+
 api.logout = () => {
   api.get("/auth/logout");
 };

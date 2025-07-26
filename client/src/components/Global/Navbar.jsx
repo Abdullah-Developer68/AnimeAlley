@@ -1,11 +1,14 @@
 import { Link } from "react-router-dom";
+import { useSelector } from "react-redux";
 import assets from "../../assets/asset";
 import useAuth from "../../Hooks/UseAuth";
 import Logout from "./Logout";
 
 const Navbar = () => {
   const { user } = useAuth();
-  console.log(user);
+  const updatedProfilePic = useSelector(
+    (state) => state.dashboard.updatedProfilePic
+  );
 
   return (
     <>
@@ -42,7 +45,10 @@ const Navbar = () => {
           {user ? (
             <div className="flex items-center gap-2 md:gap-4">
               <img
-                src={user?.profilePic || assets.defaultProfile}
+                key={`${user?.id}-${updatedProfilePic || user?.profilePic}`}
+                src={
+                  updatedProfilePic || user?.profilePic || assets.defaultProfile
+                }
                 alt={`${user?.username}'s Profile`}
                 className="w-7 h-7 md:w-10 md:h-10 rounded-full object-cover"
                 referrerPolicy="no-referrer"
@@ -52,7 +58,7 @@ const Navbar = () => {
                     error: e,
                     attemptedSrc: e.target.src,
                     userId: user?.id,
-                    profilePicUrl: user?.profilePic,
+                    profilePicUrl: updatedProfilePic || user?.profilePic,
                   });
                   e.target.onerror = null; // prevent infinite loop
                   e.target.src = assets.defaultProfile;

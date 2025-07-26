@@ -154,8 +154,7 @@ const updateUser = async (req, res) => {
   dbConnect();
   try {
     const { userId } = req.params;
-    const { username, email, role, password, editorEmail } =
-      req.body;
+    const { username, email, role, password, editorEmail } = req.body;
     // Find the editor (admin making the change)
     const editor = await userModel.findOne({ email: editorEmail });
     if (!editor) {
@@ -224,7 +223,9 @@ const updateUser = async (req, res) => {
     if (username) updateObj.username = username;
     if (email) updateObj.email = email;
 
-    if (req.file) updateObj.profilePic = req.file.path; // Use path for Cloudinary URL
+    if (req.file) {
+      updateObj.profilePic = req.file.path; // Use path for Cloudinary URL
+    }
     if (password) {
       updateObj.password = await bcrypt.hash(password, 10);
     }
@@ -244,6 +245,7 @@ const updateUser = async (req, res) => {
     if (!updatedUser) {
       return res.status(404).json({ message: "User not found after update." });
     }
+
     res.status(200).json({
       success: true,
       message: "User updated successfully.",
