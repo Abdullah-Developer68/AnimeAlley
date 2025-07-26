@@ -1,8 +1,12 @@
 import axios from "axios";
 
+// Use development URL in dev mode, production URL in production mode
+const isDevelopment = import.meta.env.MODE === "development";
+const serverURL = isDevelopment
+  ? "http://localhost:3000"
+  : import.meta.env.VITE_API_BASE_URL;
+
 // axios automatically sets the headers content type for api requests
-// const serverURL = import.meta.env.VITE_API_BASE_URL; -> production
-const serverURL = "http://localhost:3000";
 const api = axios.create({
   baseURL: `${serverURL}/api`,
   withCredentials: true, // tells the browser to send cookies, authorization headers or TLS client certificates when making a CORS.
@@ -18,7 +22,7 @@ api.googleLogout = () => {
   window.location.href = `${serverURL}/api/googleAuth/logout`;
 };
 api.googleAuthVerify = () => {
-  return api.get("/auth/verify");
+  return api.get("/auth/verify"); // Use relative path with axios baseURL
 };
 // used in auth provider to check if user is logged in with google
 api.googleAuthSuccess = () => {
