@@ -42,12 +42,24 @@ const Login = () => {
 
   return (
     <>
-      <div className="min-h-screen flex items-center justify-center px-4 py-6">
+      <div className="min-h-screen flex items-center justify-center px-4 py-6 mt-10">
         <div className="w-full max-w-md p-4 sm:p-8 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 shadow-xl">
           {/* Header */}
           <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-center text-white/90">
-            Welcome Back
+            Log In
           </h2>
+
+          {/* Trial Account Info */}
+          <div className="mb-2 p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+            <p className="text-sm text-blue-300/80 text-center">
+              <span className="font-medium text-blue-400">Demo Account:</span>{" "}
+              trailAdmin@gmail.com
+            </p>
+            <p className="text-sm text-blue-300/80 text-center">
+              <span className="font-medium text-blue-400">Password:</span>{" "}
+              12345678
+            </p>
+          </div>
 
           <form
             onSubmit={handleSubmit(localLogin)}

@@ -37,6 +37,7 @@ const ProductCatalog = () => {
   const [availProductTypes, setAvailProductTypes] = useState(["All"]);
   const [currPage, setCurrPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
   const [apiPayload, setApiPayload] = useState({
     category: "comics",
     productTypes: ["all"],
@@ -118,6 +119,7 @@ const ProductCatalog = () => {
   };
 
   const loadProducts = async () => {
+    setLoading(true);
     try {
       const response = await api.getProducts(apiPayload);
       if (response.data.success) {
@@ -131,6 +133,8 @@ const ProductCatalog = () => {
         response: error.response?.data,
         payload: apiPayload,
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -384,107 +388,124 @@ const ProductCatalog = () => {
             </thead>
 
             <tbody className="divide-y divide-white/10">
-              {products.map((product, index) => (
-                <tr key={index} className="hover:bg-white/5 transition-colors">
-                  {/* Edit & Delete buttons*/}
-                  <td className="px-6 py-4">
-                    <div className="flex justify-start gap-2">
-                      <button
-                        className="w-10 h-10 flex items-center justify-center p-2 hover:bg-white/10 rounded-lg transition-colors group"
-                        title="Edit"
-                        onClick={() => {
-                          openForm(product);
-                        }}
-                      >
-                        <img
-                          src={assets.edit}
-                          className="w-5 h-5 cursor-pointer"
-                          alt="Edit"
-                        />
-                      </button>
-                      <button
-                        className="w-10 h-10 flex items-center justify-center p-2 hover:bg-white/10 rounded-lg transition-colors group cursor-pointer"
-                        title="Delete"
-                        onClick={() => {
-                          handleDeleteModal(product);
-                        }}
-                      >
-                        <img
-                          src={assets.deleteIcon}
-                          className="w-5 h-5 cursor-pointer"
-                          alt="Delete"
-                        />
-                      </button>
-
-                      {productDeleteModalState.isOpen && <DeleteProduct />}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-10 h-10 rounded-lg object-cover bg-white/5"
-                      />
-                      <div>
-                        <p className="text-sm font-medium text-white truncate max-w-[200px]">
-                          {product.name}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          ID: #{product.productID}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-pink-500/20 text-pink-500">
-                      {product.category.charAt(0).toUpperCase() +
-                        product.category.slice(1)}
-                    </span>
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-white">
-                      {product.price} $
-                    </span>
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <div className="max-h-[56px] overflow-y-auto flex flex-col gap-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-                      {product.category === "toys" ? (
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium inline-flex items-center ${
-                            product.stock > 0
-                              ? "bg-green-500/20 text-green-500"
-                              : "bg-red-500/20 text-red-500"
-                          }`}
-                        >
-                          {product.stock > 0
-                            ? `${product.stock} available`
-                            : "Out of Stock"}
-                        </span>
-                      ) : (
-                        Object.entries(product.stock || {}).map(
-                          ([key, quantity]) => (
-                            <span
-                              key={key}
-                              className={`px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap ${
-                                quantity > 0
-                                  ? "bg-green-500/20 text-green-500"
-                                  : "bg-red-500/20 text-red-500"
-                              }`}
-                            >
-                              {product.category === "comics" ? "Vol." : ""}
-                              {key}: {quantity > 0 ? quantity : "Out"}
-                            </span>
-                          )
-                        )
-                      )}
-                    </div>
+              {loading ? (
+                <tr>
+                  <td colSpan="5" className="text-center py-8 text-gray-400">
+                    Loading...
                   </td>
                 </tr>
-              ))}
+              ) : products.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="text-center py-8 text-gray-400">
+                    No products found
+                  </td>
+                </tr>
+              ) : (
+                products.map((product, index) => (
+                  <tr
+                    key={index}
+                    className="hover:bg-white/5 transition-colors"
+                  >
+                    {/* Edit & Delete buttons*/}
+                    <td className="px-6 py-4">
+                      <div className="flex justify-start gap-2">
+                        <button
+                          className="w-10 h-10 flex items-center justify-center p-2 hover:bg-white/10 rounded-lg transition-colors group"
+                          title="Edit"
+                          onClick={() => {
+                            openForm(product);
+                          }}
+                        >
+                          <img
+                            src={assets.edit}
+                            className="w-5 h-5 cursor-pointer"
+                            alt="Edit"
+                          />
+                        </button>
+                        <button
+                          className="w-10 h-10 flex items-center justify-center p-2 hover:bg-white/10 rounded-lg transition-colors group cursor-pointer"
+                          title="Delete"
+                          onClick={() => {
+                            handleDeleteModal(product);
+                          }}
+                        >
+                          <img
+                            src={assets.deleteIcon}
+                            className="w-5 h-5 cursor-pointer"
+                            alt="Delete"
+                          />
+                        </button>
+
+                        {productDeleteModalState.isOpen && <DeleteProduct />}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="w-10 h-10 rounded-lg object-cover bg-white/5"
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-white truncate max-w-[200px]">
+                            {product.name}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            ID: #{product.productID}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-pink-500/20 text-pink-500">
+                        {product.category.charAt(0).toUpperCase() +
+                          product.category.slice(1)}
+                      </span>
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-white">
+                        {product.price} $
+                      </span>
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <div className="max-h-[56px] overflow-y-auto flex flex-col gap-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                        {product.category === "toys" ? (
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-medium inline-flex items-center ${
+                              product.stock > 0
+                                ? "bg-green-500/20 text-green-500"
+                                : "bg-red-500/20 text-red-500"
+                            }`}
+                          >
+                            {product.stock > 0
+                              ? `${product.stock} available`
+                              : "Out of Stock"}
+                          </span>
+                        ) : (
+                          Object.entries(product.stock || {}).map(
+                            ([key, quantity]) => (
+                              <span
+                                key={key}
+                                className={`px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap ${
+                                  quantity > 0
+                                    ? "bg-green-500/20 text-green-500"
+                                    : "bg-red-500/20 text-red-500"
+                                }`}
+                              >
+                                {product.category === "comics" ? "Vol." : ""}
+                                {key}: {quantity > 0 ? quantity : "Out"}
+                              </span>
+                            )
+                          )
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

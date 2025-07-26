@@ -112,6 +112,19 @@ const login = async (req, res) => {
         .json({ success: false, status: false, message: "User not found!" });
     }
 
+    // Check if user was registered through Google (no password but has googleId)
+    if (
+      (!userExist.password || userExist.password === "N/A") &&
+      userExist.googleId
+    ) {
+      return res.status(400).json({
+        success: false,
+        status: false,
+        message:
+          "You are registered through Google. Please use Google login to sign in.",
+      });
+    }
+
     const passwordMatch = await bcrypt.compare(password, userExist.password);
     if (!passwordMatch) {
       return res.status(401).json({
