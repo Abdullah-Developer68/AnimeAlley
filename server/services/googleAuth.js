@@ -58,7 +58,7 @@ const handleGoogleCallback = (req, res, next) => {
       res.cookie("token", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production", // true on Vercel
-        sameSite: "none", // or 'none' if cross-site, but then secure must be true
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Use "lax" for development
         path: "/",
         maxAge: 24 * 60 * 60 * 1000,
         // domain: '.your-app.vercel.app', // set if using custom domain or subdomain
