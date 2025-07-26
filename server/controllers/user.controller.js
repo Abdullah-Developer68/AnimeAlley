@@ -224,7 +224,7 @@ const updateUser = async (req, res) => {
     if (username) updateObj.username = username;
     if (email) updateObj.email = email;
     if (createdAt) updateObj.createdAt = createdAt;
-    if (req.file) updateObj.profilePic = req.file.filename;
+    if (req.file) updateObj.profilePic = req.file.path; // Use path for Cloudinary URL
     if (password) {
       updateObj.password = await bcrypt.hash(password, 10);
     }
