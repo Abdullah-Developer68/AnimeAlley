@@ -47,7 +47,7 @@ const createCheckoutSession = async (req, res) => {
     const lineItems = reservation.products.map((item) => {
       const itemOriginalPrice = item.productId.price;
       const itemDiscountedPrice = itemOriginalPrice * discountRatio;
-      console.log(`${process.env.SERVER_URL}/uploads/${item.productId.image}`);
+
       return {
         price_data: {
           currency: "usd",
@@ -66,17 +66,6 @@ const createCheckoutSession = async (req, res) => {
     if (couponCode && userEmail) {
       appliedCoupon = await couponModel.findOne({ couponCode });
     }
-
-    console.log("Stripe session metadata to be sent:", {
-      cartId,
-      couponCode,
-      userEmail,
-      originalTotal,
-      finalTotal,
-      discountAmount,
-      deliveryAddress,
-      SHIPPING_COST,
-    });
 
     // Create checkout session configuration
     const sessionConfig = {

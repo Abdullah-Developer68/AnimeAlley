@@ -11,13 +11,11 @@ const {
 
 // Route to initiate Google OAuth
 router.get("/login", (req, res, next) => {
-  console.log("Initiating Google Auth"); // Add logging
   initiateGoogleAuth(req, res, next);
 });
 
 // Google OAuth callback route
 router.get("/callback", (req, res, next) => {
-  console.log("Handling Google Callback"); // Add logging
   handleGoogleCallback(req, res, next);
 });
 

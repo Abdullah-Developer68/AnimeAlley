@@ -13,14 +13,6 @@ const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const checkAuthStatus = async () => {
-    // Log device info for debugging
-    const isMobile =
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent
-      );
-    console.log("Auth check - Device type:", isMobile ? "Mobile" : "Desktop");
-    console.log("Auth check - User Agent:", navigator.userAgent);
-
     try {
       // First try verifying JWT token works for both normal and Google auth
       const res = await api.verifyAuth();
@@ -37,10 +29,6 @@ const AuthProvider = ({ children }) => {
         localStorage.setItem("userInfo", JSON.stringify(googleRes.data.user));
         return;
       }
-
-      // If both fail, clear any invalid data and set user to null
-      setUser(null);
-      localStorage.removeItem("userInfo");
     } catch (error) {
       // Handle specific error cases
       if (error.response?.status === 401) {
@@ -50,11 +38,6 @@ const AuthProvider = ({ children }) => {
         localStorage.removeItem("userInfo");
       } else {
         console.error("Auth check error:", error);
-        console.error("Auth check error details:", {
-          status: error.response?.status,
-          data: error.response?.data,
-          isMobile,
-        });
         setUser(null);
       }
     } finally {

@@ -153,7 +153,7 @@ const login = async (req, res) => {
       role: userExist.role,
       profilePic: userExist.profilePic,
     };
-    console.log(user);
+
     // Send login success response
     res.status(200).json({
       success: true,

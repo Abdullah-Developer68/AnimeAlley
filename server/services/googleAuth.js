@@ -33,24 +33,13 @@ const initiateGoogleAuth = (req, res, next) => {
  */
 const handleGoogleCallback = (req, res, next) => {
   dbConnect();
-  console.log(
-    "Google callback initiated - User Agent:",
-    req.headers["user-agent"]
-  );
-  console.log("Google callback - Cookies present:", !!req.cookies);
-
   passport.authenticate("google", {
     failureRedirect: `${process.env.CLIENT_URL}/login`,
     session: true,
   })(req, res, (err) => {
     if (err) {
-      console.error("Google Auth Error:", err);
       return next(err);
     }
-
-    console.log("Google auth completed - User authenticated:", !!req.user);
-    console.log("Session data:", req.session);
-
     if (req.user) {
       // User is authenticated, create a JWT token
       const token = jwt.sign(
@@ -62,9 +51,7 @@ const handleGoogleCallback = (req, res, next) => {
         },
         process.env.JWT_KEY
       );
-      console.log("Setting JWT token for Google auth user:", req.user.email);
-
-      // Set the token in a cookie with mobile-friendly settings
+      // Set the token in a cookie
       const cookieOptions = {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -72,21 +59,12 @@ const handleGoogleCallback = (req, res, next) => {
         path: "/",
         maxAge: 24 * 60 * 60 * 1000,
       };
-
-      // Add domain in production if needed
       if (process.env.NODE_ENV === "production" && process.env.DOMAIN) {
         cookieOptions.domain = process.env.DOMAIN;
       }
-
       res.cookie("token", token, cookieOptions);
-      console.log(
-        "Cookie set successfully, redirecting to:",
-        `${process.env.CLIENT_URL}/`
-      );
       return res.redirect(`${process.env.CLIENT_URL}/`);
     }
-
-    console.log("No user found, redirecting to login");
     res.redirect(`${process.env.CLIENT_URL}/login`);
   });
 };
@@ -135,13 +113,8 @@ const LogoutFromGoogle = async (req, res) => {
 const sendUserData = async (req, res) => {
   dbConnect();
   try {
-    console.log("sendUserData called - checking authentication");
-    console.log("Session authenticated:", req.isAuthenticated());
-    console.log("Has JWT token:", !!req.cookies.token);
-
     // First check session-based authentication (Google OAuth)
     if (req.isAuthenticated() && req.user) {
-      console.log("User authenticated via session:", req.user.email);
       res.status(200).json({
         success: true,
         user: {
@@ -159,14 +132,12 @@ const sendUserData = async (req, res) => {
     const token = req.cookies.token;
     if (token) {
       try {
-        console.log("Verifying JWT token for Google auth user");
         const decoded = jwt.verify(token, process.env.JWT_KEY);
         const user = await require("../models/user.model.js").findById(
           decoded.userid
         );
 
         if (user) {
-          console.log("User authenticated via JWT token:", user.email);
           res.status(200).json({
             success: true,
             user: {
@@ -180,18 +151,16 @@ const sendUserData = async (req, res) => {
           return;
         }
       } catch (jwtError) {
-        console.error("JWT verification error in sendUserData:", jwtError);
+        // ignore
       }
     }
 
     // No authentication found
-    console.log("No authentication found in sendUserData");
     res.status(200).json({
       success: false,
       message: "Not authenticated",
     });
   } catch (error) {
-    console.error("Error in sendUserData:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
