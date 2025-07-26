@@ -268,7 +268,7 @@ const Users = () => {
                               src={
                                 u.profilePic.startsWith("http")
                                   ? u.profilePic
-                                  : `$${u.profilePic}`
+                                  : u.profilePic // Cloudinary URLs are complete
                               }
                               alt={u.username}
                               className="w-10 h-10 object-cover rounded-full"
@@ -278,7 +278,26 @@ const Users = () => {
                               }}
                             />
                           ) : (
-                            <span className="text-sm font-medium text-pink-500">
+                            <img
+                              src={assets.defaultProfile}
+                              alt={u.username}
+                              className="w-10 h-10 object-cover rounded-full"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                // Fallback to initials if default image fails
+                                e.target.style.display = "none";
+                                e.target.nextElementSibling.style.display =
+                                  "block";
+                              }}
+                            />
+                          )}
+                          {!u.profilePic && (
+                            <span
+                              className="text-sm font-medium text-pink-500"
+                              style={{
+                                display: u.profilePic ? "none" : "block",
+                              }}
+                            >
                               {u.username?.slice(0, 2).toUpperCase()}
                             </span>
                           )}

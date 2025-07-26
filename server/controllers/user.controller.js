@@ -154,7 +154,7 @@ const updateUser = async (req, res) => {
   dbConnect();
   try {
     const { userId } = req.params;
-    const { username, email, role, createdAt, password, editorEmail } =
+    const { username, email, role, password, editorEmail } =
       req.body;
     // Find the editor (admin making the change)
     const editor = await userModel.findOne({ email: editorEmail });
@@ -223,17 +223,7 @@ const updateUser = async (req, res) => {
     const updateObj = {};
     if (username) updateObj.username = username;
     if (email) updateObj.email = email;
-    // Handle createdAt with proper date validation
-    if (createdAt) {
-      const parsedDate = new Date(createdAt);
-      if (!isNaN(parsedDate.getTime())) {
-        updateObj.createdAt = parsedDate;
-      } else {
-        return res
-          .status(400)
-          .json({ message: "Invalid date format for createdAt." });
-      }
-    }
+
     if (req.file) updateObj.profilePic = req.file.path; // Use path for Cloudinary URL
     if (password) {
       updateObj.password = await bcrypt.hash(password, 10);

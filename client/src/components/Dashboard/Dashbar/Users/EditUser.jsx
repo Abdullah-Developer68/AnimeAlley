@@ -42,7 +42,6 @@ const EditUser = () => {
       username: "",
       email: "",
       role: "user",
-      createdAt: "",
       password: "",
     },
   });
@@ -53,20 +52,18 @@ const EditUser = () => {
         username: selectedUser.username || "",
         email: selectedUser.email || "",
         role: selectedUser.role || "user",
-        createdAt: selectedUser.createdAt
-          ? new Date(selectedUser.createdAt).toISOString().slice(0, 10)
-          : "",
         password: "",
       });
-      setPreviewPic(
-        selectedUser.profilePic
-          ? `${selectedUser.profilePic}`
-          : selectedUser.profilePic === undefined &&
-            selectedUser.googleId &&
-            selectedUser.profilePic
-          ? selectedUser.profilePic
-          : assets.defaultProfile
-      );
+
+      // Set preview picture logic
+      let previewUrl = assets.defaultProfile; // Default fallback
+
+      if (selectedUser.profilePic) {
+        // If user has a profile picture, use it directly (Cloudinary URLs are complete)
+        previewUrl = selectedUser.profilePic;
+      }
+
+      setPreviewPic(previewUrl);
     }
   }, [selectedUser, reset]);
 
@@ -118,6 +115,10 @@ const EditUser = () => {
     if (file) {
       setProfilePic(file);
       setPreviewPic(URL.createObjectURL(file));
+    } else {
+      // If no file selected, reset to original or default
+      setProfilePic(null);
+      setPreviewPic(selectedUser?.profilePic || assets.defaultProfile);
     }
   };
 
@@ -132,6 +133,10 @@ const EditUser = () => {
       if (res.data.success) {
         toast.success("User updated successfully!");
         dispatch(setReloadData("users"));
+        // Reset states before closing
+        setProfilePic(null);
+        setPreviewPic("");
+        setError("");
         dispatch(closeUserEditModal());
       } else {
         setError(res.data.message || "Failed to update user.");
@@ -144,6 +149,10 @@ const EditUser = () => {
   };
 
   const handleClose = () => {
+    // Reset states when closing
+    setProfilePic(null);
+    setPreviewPic("");
+    setError("");
     dispatch(closeUserEditModal());
   };
 
@@ -244,14 +253,13 @@ const EditUser = () => {
           ) : null}
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-1">
-              Joined (Created At)
+              Joined Date
             </label>
-            <input
-              type="date"
-              {...register("createdAt")}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
-              disabled={allControlsDisabled}
-            />
+            <p className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300">
+              {selectedUser?.createdAt
+                ? new Date(selectedUser.createdAt).toLocaleDateString()
+                : "N/A"}
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-1">
