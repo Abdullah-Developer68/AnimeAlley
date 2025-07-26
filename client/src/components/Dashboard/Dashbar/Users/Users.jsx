@@ -313,12 +313,18 @@ const Users = () => {
                     <td className="px-6 py-4">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          u.role === "admin" || u.role === "superAdmin"
+                          u.role === "superAdmin"
+                            ? "bg-green-500/20 text-green-500"
+                            : u.role === "admin"
                             ? "bg-purple-500/20 text-purple-500"
                             : "bg-blue-500/20 text-blue-500"
                         }`}
                       >
-                        {u.role}
+                        {u.role === "superAdmin"
+                          ? "Super Admin"
+                          : u.role === "admin"
+                          ? "Admin"
+                          : "User"}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-white">
