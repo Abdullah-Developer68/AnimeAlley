@@ -57,7 +57,7 @@ const userSchema = new mongoose.Schema(
   { timestamps: true } //Automatically add createdAt & updatedAt
 );
 
-// Adds index on searchable fields - must be done before creating the model
+// Adds index on searchable fields
 userSchema.index(
   {
     username: "text",

@@ -23,6 +23,20 @@ const EditUser = () => {
   );
   const { user } = useAuth(); // Get user from the auth context
   const editor = user || {}; // Fallback to empty object if user is not available
+
+  // Helper function to format date with fallback for invalid dates
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "27-07-2025"; // It must be N/A but for trailAccount for viewers let it be this
+
+    const date = new Date(dateStr);
+
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      return "27-07-2025"; // It must be N/A but for trailAccount for viewers let it be this
+    }
+
+    return date.toLocaleDateString();
+  };
   const [selectedUserRole, setSelectedUserRole] = useState("");
   const [roleDropdownOptions, setRoleDropdownOptions] = useState(roleOptions);
   const [roleDropdownDisabled, setRoleDropdownDisabled] = useState(false);
@@ -265,9 +279,7 @@ const EditUser = () => {
               Joined Date
             </label>
             <p className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300">
-              {selectedUser?.createdAt
-                ? new Date(selectedUser.createdAt).toLocaleDateString()
-                : "N/A"}
+              {formatDate(selectedUser?.createdAt)}
             </p>
           </div>
           <div>

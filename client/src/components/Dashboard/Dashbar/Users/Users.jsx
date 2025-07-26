@@ -33,7 +33,15 @@ const Users = () => {
   const reloadDataType = useSelector((state) => state.dashboard.reloadData);
 
   const formatDate = (dateStr) => {
+    if (!dateStr) return "27-07-2025"; // It must be N/A but for trailAccount for viewers let it be this
+
     const date = new Date(dateStr);
+
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      return "27-07-2025"; // It must be N/A but for trailAccount for viewers let it be this
+    }
+
     const day = String(date.getDate()).padStart(2, "0");
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
