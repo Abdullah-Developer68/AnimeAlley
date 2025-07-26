@@ -24,17 +24,26 @@ const AuthProvider = ({ children }) => {
 
       // If JWT verification fails, try Google auth
       const googleRes = await api.googleAuthSuccess();
-      console.log("Google login response:", googleRes.data);
       if (googleRes.data.success) {
         setUser(googleRes.data.user);
         localStorage.setItem("userInfo", JSON.stringify(googleRes.data.user));
         return;
       }
 
+      // If both fail, clear any invalid data and set user to null
       setUser(null);
+      localStorage.removeItem("userInfo");
     } catch (error) {
-      console.error("Auth check error:", error);
-      setUser(null);
+      // Handle specific error cases
+      if (error.response?.status === 401) {
+        // Token is invalid/expired, clear stored data
+        console.log("Token expired or invalid, clearing auth data");
+        setUser(null);
+        localStorage.removeItem("userInfo");
+      } else {
+        console.error("Auth check error:", error);
+        setUser(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -50,7 +59,12 @@ const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    checkAuthStatus();
+    // Only check auth if we have stored user data or if we're loading for the first time
+    if (userInfo || loading) {
+      checkAuthStatus();
+    } else {
+      setLoading(false);
+    }
   }, []); // Remove user dependency to avoid infinite loops
 
   return (
