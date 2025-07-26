@@ -76,7 +76,7 @@ const signUp = async (req, res) => {
       secure: process.env.NODE_ENV === "production", // true on Vercel
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Use "lax" for development
       path: "/",
-      // domain: '.your-app.vercel.app', // set if using custom domain or subdomain
+      domain: process.env.DOMAIN || undefined, // set if using custom domain or subdomain
     });
     res.status(201).json({
       success: true,
@@ -143,7 +143,7 @@ const login = async (req, res) => {
       secure: process.env.NODE_ENV === "production", // true on Vercel
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Use "lax" for development
       path: "/",
-      // domain: '.your-app.vercel.app', // set if using custom domain or subdomain
+      domain: process.env.DOMAIN || undefined, // set if using custom domain or subdomain
     });
 
     const user = {

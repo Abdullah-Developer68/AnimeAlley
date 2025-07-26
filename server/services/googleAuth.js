@@ -33,6 +33,12 @@ const initiateGoogleAuth = (req, res, next) => {
  */
 const handleGoogleCallback = (req, res, next) => {
   dbConnect();
+  console.log(
+    "Google callback initiated - User Agent:",
+    req.headers["user-agent"]
+  );
+  console.log("Google callback - Cookies present:", !!req.cookies);
+
   passport.authenticate("google", {
     failureRedirect: `${process.env.CLIENT_URL}/login`,
     session: true,
@@ -41,6 +47,9 @@ const handleGoogleCallback = (req, res, next) => {
       console.error("Google Auth Error:", err);
       return next(err);
     }
+
+    console.log("Google auth completed - User authenticated:", !!req.user);
+    console.log("Session data:", req.session);
 
     if (req.user) {
       // User is authenticated, create a JWT token
@@ -54,18 +63,30 @@ const handleGoogleCallback = (req, res, next) => {
         process.env.JWT_KEY
       );
       console.log("Setting JWT token for Google auth user:", req.user.email);
-      // Set the token in a cookie
-      res.cookie("token", token, {
+
+      // Set the token in a cookie with mobile-friendly settings
+      const cookieOptions = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // true on Vercel
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Use "lax" for development
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         path: "/",
         maxAge: 24 * 60 * 60 * 1000,
-        // domain: '.your-app.vercel.app', // set if using custom domain or subdomain
-      });
-      console.log("Redirecting to client URL after successful Google auth");
+      };
+
+      // Add domain in production if needed
+      if (process.env.NODE_ENV === "production" && process.env.DOMAIN) {
+        cookieOptions.domain = process.env.DOMAIN;
+      }
+
+      res.cookie("token", token, cookieOptions);
+      console.log(
+        "Cookie set successfully, redirecting to:",
+        `${process.env.CLIENT_URL}/`
+      );
       return res.redirect(`${process.env.CLIENT_URL}/`);
     }
+
+    console.log("No user found, redirecting to login");
     res.redirect(`${process.env.CLIENT_URL}/login`);
   });
 };

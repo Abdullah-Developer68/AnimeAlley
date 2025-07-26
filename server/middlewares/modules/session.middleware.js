@@ -1,4 +1,6 @@
 const session = require("express-session");
+const dotenv = require("dotenv");
+dotenv.config();
 
 // Middleware instance for express-session
 const expSession = session({
@@ -9,8 +11,9 @@ const expSession = session({
     secure: process.env.NODE_ENV === "production", // Set to true in production with HTTPS
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 1 day
-    sameSite: "none", // Consistent with auth cookies
-    // domain: "localhost", // Set to your domain in production
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Use "lax" for development, "none" for production
+    domain:
+      process.env.NODE_ENV === "production" ? process.env.DOMAIN : undefined, // Set domain in production
   },
   name: "session-id",
 });
