@@ -57,9 +57,7 @@ const userSchema = new mongoose.Schema(
   { timestamps: true } //Automatically add createdAt & updatedAt
 );
 
-const User = mongoose.model("user", userSchema);
-
-// Adds index on searchable fields
+// Adds index on searchable fields - must be done before creating the model
 userSchema.index(
   {
     username: "text",
@@ -70,5 +68,7 @@ userSchema.index(
     name: "UserSearchIndex",
   }
 );
+
+const User = mongoose.model("user", userSchema);
 
 module.exports = User;

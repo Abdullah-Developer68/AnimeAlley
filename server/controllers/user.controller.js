@@ -223,7 +223,14 @@ const updateUser = async (req, res) => {
     const updateObj = {};
     if (username) updateObj.username = username;
     if (email) updateObj.email = email;
-    if (createdAt) updateObj.createdAt = createdAt;
+    // Note: createdAt should not be manually updated as it's automatically managed by timestamps
+    // If you need to allow createdAt updates for admin purposes, uncomment and validate:
+    // if (createdAt && editor.role === "superAdmin") {
+    //   const parsedDate = new Date(createdAt);
+    //   if (!isNaN(parsedDate.getTime())) {
+    //     updateObj.createdAt = parsedDate;
+    //   }
+    // }
     if (req.file) updateObj.profilePic = req.file.path; // Use path for Cloudinary URL
     if (password) {
       updateObj.password = await bcrypt.hash(password, 10);
