@@ -36,7 +36,7 @@ const Login = () => {
     }
   };
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     api.googleLogin();
   };
 

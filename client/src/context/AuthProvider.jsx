@@ -11,41 +11,10 @@ const AuthProvider = ({ children }) => {
   const userInfo = localStorage.getItem("userInfo");
   const [user, setUser] = useState(userInfo ? JSON.parse(userInfo) : null);
   const [loading, setLoading] = useState(true);
+  console.log("AuthProvider initialized with user:", user);
 
-  const checkAuthStatus = async () => {
-    try {
-      // First try verifying JWT token works for both normal and Google auth
-      const res = await api.verifyAuth();
-      if (res.data.success) {
-        setUser(res.data.user);
-        localStorage.setItem("userInfo", JSON.stringify(res.data.user));
-        return;
-      }
-
-      // If JWT verification fails, try Google auth
-      const googleRes = await api.googleAuthSuccess();
-      if (googleRes.data.success) {
-        setUser(googleRes.data.user);
-        localStorage.setItem("userInfo", JSON.stringify(googleRes.data.user));
-        return;
-      }
-    } catch (error) {
-      // Handle specific error cases
-      if (error.response?.status === 401) {
-        // Token is invalid/expired, clear stored data
-        console.log("Token expired or invalid, clearing auth data");
-        setUser(null);
-        localStorage.removeItem("userInfo");
-      } else {
-        console.error("Auth check error:", error);
-        setUser(null);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-  // update the user when it changes for manual auth
-  const updateUser = (userData) => {
+  // Helper to set user and localStorage
+  const setUserAndStorage = (userData) => {
     setUser(userData);
     if (userData) {
       localStorage.setItem("userInfo", JSON.stringify(userData));
@@ -54,17 +23,62 @@ const AuthProvider = ({ children }) => {
     }
   };
 
+  // Try Google auth as a fallback
+  const tryGoogleAuth = async () => {
+    try {
+      const googleRes = await api.googleAuthSuccess();
+      if (googleRes.data.success) {
+        setUserAndStorage(googleRes.data.user);
+        return true;
+      }
+    } catch (googleError) {
+      if (googleError.response?.status === 401) {
+        console.log("Google token expired or invalid, clearing auth data");
+      } else {
+        console.error("Google auth check error:", googleError);
+      }
+    }
+    setUserAndStorage(null);
+    return false;
+  };
+
+  // Main auth check
+  const checkAuthStatus = async () => {
+    try {
+      // check for JWT auth first for the local Signup
+      const res = await api.verifyAuth();
+      if (res.data.success) {
+        setUserAndStorage(res.data.user);
+        return;
+      }
+    } catch (error) {
+      if (error.response?.status === 401) {
+        // Try Google auth if JWT fails
+        const googleSuccess = await tryGoogleAuth();
+        if (googleSuccess) return;
+        // If Google also fails, clear user
+        setUserAndStorage(null);
+        return;
+      }
+      // Other errors
+      console.error("Auth check error:", error);
+      setUserAndStorage(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    // Only check auth if we have stored user data or if we're loading for the first time
     if (userInfo || loading) {
       checkAuthStatus();
     } else {
       setLoading(false);
     }
-  }, []); // Remove user dependency to avoid infinite loops
+    // eslint-disable-next-line
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, setUser: updateUser, loading }}>
+    <AuthContext.Provider value={{ user, setUser: setUserAndStorage, loading }}>
       {children}
     </AuthContext.Provider>
   );

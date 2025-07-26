@@ -31,6 +31,7 @@ const makNSenOTP = async (req, res) => {
     res.status(409).json({
       message: "Your account already exists, so you should just login!",
     });
+    return;
   }
   await sendOTP(email, otp);
   res.status(200).json({ message: "OTP sent" });
@@ -71,13 +72,16 @@ const signUp = async (req, res) => {
     await user.save();
     // Create token and sign in
     const token = jwt.sign({ userid: user._id, email }, secretKey);
-    res.cookie("token", token, {
+    const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // true on Vercel
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Use "lax" for development
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       path: "/",
-      domain: process.env.DOMAIN || undefined, // set if using custom domain or subdomain
-    });
+    };
+    if (process.env.NODE_ENV === "production" && process.env.DOMAIN) {
+      cookieOptions.domain = process.env.DOMAIN;
+    }
+    res.cookie("token", token, cookieOptions);
     res.status(201).json({
       success: true,
       user: {
@@ -138,13 +142,16 @@ const login = async (req, res) => {
       { email: userExist.email, userid: userExist._id },
       secretKey
     );
-    res.cookie("token", token, {
+    const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // true on Vercel
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Use "lax" for development
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       path: "/",
-      domain: process.env.DOMAIN || undefined, // set if using custom domain or subdomain
-    });
+    };
+    if (process.env.NODE_ENV === "production" && process.env.DOMAIN) {
+      cookieOptions.domain = process.env.DOMAIN;
+    }
+    res.cookie("token", token, cookieOptions);
 
     const user = {
       id: userExist._id,

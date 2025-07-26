@@ -33,8 +33,12 @@ const initiateGoogleAuth = (req, res, next) => {
  */
 const handleGoogleCallback = (req, res, next) => {
   dbConnect();
+  const clientUrl =
+    process.env.NODE_ENV === "production"
+      ? process.env.CLIENT_URL
+      : "http://localhost:5173";
   passport.authenticate("google", {
-    failureRedirect: `${process.env.CLIENT_URL}/login`,
+    failureRedirect: `${clientUrl}/login`,
     session: true,
   })(req, res, (err) => {
     if (err) {
@@ -63,9 +67,9 @@ const handleGoogleCallback = (req, res, next) => {
         cookieOptions.domain = process.env.DOMAIN;
       }
       res.cookie("token", token, cookieOptions);
-      return res.redirect(`${process.env.CLIENT_URL}/`);
+      return res.redirect(`${clientUrl}/`);
     }
-    res.redirect(`${process.env.CLIENT_URL}/login`);
+    res.redirect(`${clientUrl}/login`);
   });
 };
 
