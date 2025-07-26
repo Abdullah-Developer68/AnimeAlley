@@ -55,6 +55,20 @@ const getUsers = async (req, res) => {
       .skip(startIndex)
       .limit(usersPerPage);
 
+    // Custom sort: superAdmin first, then admin, then user, then by creation date
+    requiredUsers.sort((a, b) => {
+      const roleOrder = { superAdmin: 1, admin: 2, user: 3 };
+      const roleA = roleOrder[a.role] || 4;
+      const roleB = roleOrder[b.role] || 4;
+
+      if (roleA !== roleB) {
+        return roleA - roleB; // Sort by role first
+      }
+
+      // If roles are the same, sort by creation date (newest first)
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+
     // Respond with paginated user data
     res.status(200).json({
       success: true,
