@@ -9,14 +9,14 @@ dotenv.config();
 
 const secretKey = process.env.JWT_KEY;
 
-// Centralized cookie configuration for cross-domain JWT auth
+// Centralized cookie configuration for consistent JWT-only auth
 const getCookieOptions = () => {
   const isProduction = process.env.NODE_ENV === "production";
 
   return {
     httpOnly: true,
-    secure: isProduction, // HTTPS required in production
-    sameSite: isProduction ? "none" : "lax", // "none" required for cross-domain in production
+    secure: isProduction,
+    sameSite: "lax",
     path: "/",
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     ...(isProduction &&
@@ -109,8 +109,6 @@ const signUp = async (req, res) => {
         profilePic: user.profilePic,
         role: user.role,
       },
-      token, // Include token in response for header-based auth
-      message: "User created successfully!",
     });
   } catch (error) {
     console.error("Registration Error:", error.message);
@@ -188,11 +186,10 @@ const login = async (req, res) => {
       profilePic: userExist.profilePic,
     };
 
-    // Send login success response with token in both cookie and header
+    // Send login success response
     res.status(200).json({
       success: true,
       user,
-      token, // Include token in response for header-based auth
       message: "You have been logged in!",
     });
   } catch (error) {
@@ -228,16 +225,7 @@ const logout = (req, res) => {
 //  helps to stay logged in even after refreshing the page
 const verifyToken = async (req, res) => {
   try {
-    // Check for token in cookies first, then in Authorization header
-    let token = req.cookies.token;
-
-    if (!token) {
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith("Bearer ")) {
-        token = authHeader.substring(7);
-      }
-    }
-
+    const token = req.cookies.token;
     if (!token) {
       return res
         .status(401)

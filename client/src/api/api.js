@@ -6,56 +6,11 @@ const serverURL = isDevelopment
   ? "http://localhost:3000"
   : import.meta.env.VITE_API_BASE_URL;
 
-// Token storage helper functions
-const getStoredToken = () => {
-  return localStorage.getItem("authToken");
-};
-
-const setStoredToken = (token) => {
-  if (token) {
-    localStorage.setItem("authToken", token);
-  } else {
-    localStorage.removeItem("authToken");
-  }
-};
-
 // axios automatically sets the headers content type for api requests
 const api = axios.create({
   baseURL: `${serverURL}/api`,
   withCredentials: true, // tells the browser to send cookies, authorization headers or TLS client certificates when making a CORS.
 });
-
-// Add request interceptor to include token in headers
-api.interceptors.request.use(
-  (config) => {
-    const token = getStoredToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Add response interceptor to handle token from responses
-api.interceptors.response.use(
-  (response) => {
-    // If response contains a token, store it
-    if (response.data && response.data.token) {
-      setStoredToken(response.data.token);
-    }
-    return response;
-  },
-  (error) => {
-    // If 401 error, clear stored token
-    if (error.response && error.response.status === 401) {
-      setStoredToken(null);
-    }
-    return Promise.reject(error);
-  }
-);
 
 // --- AUTH API'S ---
 
@@ -80,8 +35,6 @@ api.googleAuthSuccess = () => {
 };
 
 api.logout = () => {
-  // Clear stored token on logout
-  setStoredToken(null);
   return api.get("/auth/logout");
 };
 
@@ -277,6 +230,4 @@ api.createCheckOutSession = (
     shippingCost,
   });
 };
-// Export token management functions for use in components
-export { getStoredToken, setStoredToken };
 export default api;
