@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import useAuth from "../Hooks/UseAuth";
 import { toast } from "react-toastify";
@@ -8,14 +8,23 @@ const GoogleAuthSuccess = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { setUser } = useAuth();
+  const hasProcessed = useRef(false);
 
   useEffect(() => {
+    // Prevent double execution
+    if (hasProcessed.current) return;
     const handleGoogleAuthSuccess = async () => {
       try {
+        hasProcessed.current = true; // Mark as processed
+
         // Get token from URL query parameter
         const token = searchParams.get("token");
 
         if (token) {
+          console.log(
+            "Processing token from URL:",
+            token.substring(0, 20) + "..."
+          );
           // Store token in localStorage
           localStorage.setItem("authToken", token);
 
@@ -32,10 +41,12 @@ const GoogleAuthSuccess = () => {
             setUser(res.data.user);
             toast.success("Successfully logged in with Google!");
             navigate("/");
+            return; // Ensure we don't continue to the fallback
           } else {
             throw new Error("Failed to verify token");
           }
         } else {
+          console.log("No token in URL, trying cookie fallback");
           // Fallback: try to get user data from cookies (existing flow)
           const res = await api.googleAuthSuccess();
 
@@ -43,10 +54,7 @@ const GoogleAuthSuccess = () => {
             localStorage.clear();
             localStorage.setItem("userInfo", JSON.stringify(res.data.user));
             setUser(res.data.user);
-            setTimeout(() => {
-              toast.success("Successfully logged in with Google!");
-            }, 1000);
-
+            toast.success("Successfully logged in with Google!");
             navigate("/");
           } else {
             throw new Error("Google authentication failed");
@@ -60,7 +68,7 @@ const GoogleAuthSuccess = () => {
     };
 
     handleGoogleAuthSuccess();
-  }, [searchParams, navigate, setUser]);
+  }, [searchParams, setUser]);
 
   return (
     <div className="flex items-center justify-center h-screen w-full bg-transparent">
