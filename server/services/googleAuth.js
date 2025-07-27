@@ -3,6 +3,26 @@ const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const dbConnect = require("../config/dbConnect.js");
 
+const clientUrl = process.env.CLIENT_URL;
+
+// Centralized cookie options for consistency with auth service
+const getCookieOptions = () => {
+  const isProduction = process.env.NODE_ENV === "production";
+
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    path: "/",
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    // Add domain for production cross-origin setup
+    ...(isProduction &&
+      process.env.COOKIE_DOMAIN && {
+        domain: process.env.COOKIE_DOMAIN,
+      }),
+  };
+};
+
 /**
  * Step 1: Initial Authentication
  * Initiates the Google OAuth flow by redirecting to the consent screen.
@@ -56,15 +76,7 @@ const handleGoogleCallback = (req, res, next) => {
         process.env.JWT_KEY
       );
       // Set the token in a cookie
-      const cookieOptions = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // none for cross-site & lax for same-site
-        path: "/",
-        maxAge: 24 * 60 * 60 * 1000,
-      };
-
-      res.cookie("token", token, cookieOptions);
+      res.cookie("authToken", token, getCookieOptions());
       return res.redirect(`${clientUrl}/`);
     }
     res.redirect(`${clientUrl}/login`);
@@ -131,7 +143,7 @@ const sendUserData = async (req, res) => {
     }
 
     // If no session, check for JWT token (for users who logged in via Google and got JWT)
-    const token = req.cookies.token;
+    const token = req.cookies.authToken;
     if (token) {
       try {
         const decoded = jwt.verify(token, process.env.JWT_KEY);

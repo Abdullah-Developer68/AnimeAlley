@@ -21,6 +21,10 @@ api.googleLogin = () => {
 api.googleLogout = () => {
   window.location.href = `${serverURL}/api/googleAuth/logout`;
 };
+// login with email and password credentials
+api.login = (loginData) => {
+  return api.post("/auth/login", loginData);
+};
 // verifies JWT tokens for both local and google auth
 api.verifyAuth = () => {
   return api.get("/auth/verify");
@@ -31,7 +35,7 @@ api.googleAuthSuccess = () => {
 };
 
 api.logout = () => {
-  api.get("/auth/logout");
+  return api.get("/auth/logout");
 };
 
 // --- PRODUCT API'S ---

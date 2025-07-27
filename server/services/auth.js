@@ -9,6 +9,24 @@ dotenv.config();
 
 const secretKey = process.env.JWT_KEY;
 
+// Centralized cookie options for consistency across all auth functions
+const getCookieOptions = () => {
+  const isProduction = process.env.NODE_ENV === "production";
+
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    path: "/",
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    // Add domain for production cross-origin setup
+    ...(isProduction &&
+      process.env.COOKIE_DOMAIN && {
+        domain: process.env.COOKIE_DOMAIN,
+      }),
+  };
+};
+
 const makNSenOTP = async (req, res) => {
   dbConnect();
   const { email } = req.body;
@@ -71,15 +89,18 @@ const signUp = async (req, res) => {
     user.otpExpiry = undefined;
     await user.save();
     // Create token and sign in
-    const token = jwt.sign({ userid: user._id, email }, secretKey);
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // none for cross-site & lax for same-site
-      path: "/",
-    };
+    const token = jwt.sign(
+      {
+        userid: user._id,
+        email: user.email,
+        username: user.username,
+        profilePic: user.profilePic,
+        role: user.role,
+      },
+      secretKey
+    );
 
-    res.cookie("token", token, cookieOptions);
+    res.cookie("authToken", token, getCookieOptions());
     res.status(201).json({
       success: true,
       user: {
@@ -104,10 +125,19 @@ const login = async (req, res) => {
   dbConnect();
   try {
     const { email, password } = req.body;
+
+    // Check if credentials are provided
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        status: false,
+        message: "Email and password are required for login!",
+      });
+    }
+
     // Check if user exists
     const userExist = await userModel.findOne({ email });
 
-    // If user exists, compare password
     if (!userExist) {
       return res
         .status(401)
@@ -127,7 +157,7 @@ const login = async (req, res) => {
       });
     }
 
-    const passwordMatch = bcrypt.compare(password, userExist.password);
+    const passwordMatch = await bcrypt.compare(password, userExist.password);
     if (!passwordMatch) {
       return res.status(401).json({
         status: false,
@@ -137,17 +167,17 @@ const login = async (req, res) => {
 
     // Create token and send as cookie
     const token = jwt.sign(
-      { email: userExist.email, userid: userExist._id },
+      {
+        userid: userExist._id,
+        email: userExist.email,
+        username: userExist.username,
+        profilePic: userExist.profilePic,
+        role: userExist.role,
+      },
       secretKey
     );
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // none for cross-site & lax for same-site
-      path: "/",
-    };
 
-    res.cookie("token", token, cookieOptions);
+    res.cookie("authToken", token, getCookieOptions());
 
     const user = {
       id: userExist._id,
@@ -170,44 +200,72 @@ const login = async (req, res) => {
 };
 
 const logout = (req, res) => {
-  // Clear the cookie by setting an expiry in the past
-  res.cookie("token", "", { expires: new Date(0) });
-  res.redirect("/");
+  try {
+    // Clear the cookie with same options as when it was set
+    const clearCookieOptions = {
+      ...getCookieOptions(),
+      expires: new Date(0),
+      maxAge: 0,
+    };
+
+    res.cookie("authToken", "", clearCookieOptions);
+
+    res.status(200).json({
+      success: true,
+      message: "Logged out successfully",
+    });
+  } catch (error) {
+    console.error("Logout Error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Logout failed",
+    });
+  }
 };
 
 //  helps to stay logged in even after refreshing the page
 const verifyToken = async (req, res) => {
-  dbConnect();
   try {
-    const token = req.cookies.token;
+    const token = req.cookies.authToken;
     if (!token) {
       return res
         .status(401)
-        .json({ success: false, message: "No token found" });
+        .json({ success: false, message: "No authentication token found" });
     }
 
     const decoded = jwt.verify(token, secretKey);
-    const user = await userModel.findById(decoded.userid);
-
-    if (!user) {
-      return res
-        .status(401)
-        .json({ success: false, message: "User not found" });
-    }
 
     res.json({
       success: true,
       user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        profilePic: user.profilePic,
-        role: user.role,
+        id: decoded.userid,
+        username: decoded.username,
+        email: decoded.email,
+        profilePic: decoded.profilePic,
+        role: decoded.role,
       },
     });
   } catch (error) {
     console.error("Token verification error:", error);
-    res.status(401).json({ success: false, message: "Invalid token" });
+
+    // Handle specific JWT errors
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid authentication token.",
+      });
+    }
+
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication token expired.",
+      });
+    }
+
+    res
+      .status(401)
+      .json({ success: false, message: "Token verification failed" });
   }
 };
 
