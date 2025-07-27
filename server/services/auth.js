@@ -75,12 +75,10 @@ const signUp = async (req, res) => {
     const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // none for cross-site & lax for same-site
       path: "/",
     };
-    if (process.env.NODE_ENV === "production" && process.env.DOMAIN) {
-      cookieOptions.domain = process.env.DOMAIN;
-    }
+
     res.cookie("token", token, cookieOptions);
     res.status(201).json({
       success: true,

@@ -59,13 +59,11 @@ const handleGoogleCallback = (req, res, next) => {
       const cookieOptions = {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // none for cross-site & lax for same-site
         path: "/",
         maxAge: 24 * 60 * 60 * 1000,
       };
-      if (process.env.NODE_ENV === "production" && process.env.DOMAIN) {
-        cookieOptions.domain = process.env.DOMAIN;
-      }
+
       res.cookie("token", token, cookieOptions);
       return res.redirect(`${clientUrl}/`);
     }
