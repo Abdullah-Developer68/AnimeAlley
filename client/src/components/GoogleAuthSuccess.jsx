@@ -43,7 +43,10 @@ const GoogleAuthSuccess = () => {
             localStorage.clear();
             localStorage.setItem("userInfo", JSON.stringify(res.data.user));
             setUser(res.data.user);
-            setTimeout(() => {}, 1000);
+            setTimeout(() => {
+              toast.success("Successfully logged in with Google!");
+            }, 1000);
+
             navigate("/");
           } else {
             throw new Error("Google authentication failed");
