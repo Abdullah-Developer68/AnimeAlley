@@ -158,12 +158,12 @@ const sendUserData = async (req, res) => {
     }
 
     // No authentication found
-    res.status(200).json({
+    return res.status(200).json({
       success: false,
       message: "Not authenticated",
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Internal server error",
     });
