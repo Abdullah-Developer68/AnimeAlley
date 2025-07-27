@@ -146,9 +146,7 @@ const login = async (req, res) => {
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // none for cross-site & lax for same-site
       path: "/",
     };
-    if (process.env.NODE_ENV === "production" && process.env.DOMAIN) {
-      cookieOptions.domain = process.env.DOMAIN;
-    }
+
     res.cookie("token", token, cookieOptions);
 
     const user = {
