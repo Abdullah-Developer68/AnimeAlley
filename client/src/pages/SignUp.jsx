@@ -85,6 +85,13 @@ const Signup = () => {
       const res = await api.post("/auth/signup", { email, ...data });
       if (res.data.success) {
         localStorage.clear();
+
+        // Store token in localStorage for Authorization header
+        if (res.data.token) {
+          localStorage.setItem("authToken", res.data.token);
+        }
+
+        // Store user info
         setUser(res.data.user);
         localStorage.setItem("userInfo", JSON.stringify(res.data.user));
         navigate("/");

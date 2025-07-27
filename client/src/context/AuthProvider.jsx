@@ -9,9 +9,15 @@ const AuthContext = createContext();
 
 const AuthProvider = ({ children }) => {
   const userInfo = localStorage.getItem("userInfo");
+  const authToken = localStorage.getItem("authToken");
   const [user, setUser] = useState(userInfo ? JSON.parse(userInfo) : null);
   const [loading, setLoading] = useState(true);
-  console.log("AuthProvider initialized with user:", user);
+  console.log(
+    "AuthProvider initialized with user:",
+    user,
+    "token exists:",
+    !!authToken
+  );
 
   // Helper to set user and localStorage
   const setUserAndStorage = (userData) => {
@@ -19,7 +25,9 @@ const AuthProvider = ({ children }) => {
     if (userData) {
       localStorage.setItem("userInfo", JSON.stringify(userData));
     } else {
+      // Clear all auth-related data on logout
       localStorage.removeItem("userInfo");
+      localStorage.removeItem("authToken");
     }
   };
 
@@ -69,7 +77,8 @@ const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    if (userInfo || loading) {
+    // Check auth status if we have user info or auth token in localStorage
+    if (userInfo || authToken || loading) {
       checkAuthStatus();
     } else {
       setLoading(false);

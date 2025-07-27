@@ -12,6 +12,46 @@ const api = axios.create({
   withCredentials: true, // tells the browser to send cookies, authorization headers or TLS client certificates when making a CORS.
 });
 
+// Add request interceptor to include Authorization header if token exists in localStorage
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor to handle token expiration
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    // If we get a 401 error, the token might be expired or invalid
+    if (error.response?.status === 401) {
+      // Clear auth data from localStorage
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("userInfo");
+
+      // Only redirect to login if we're not already on login/signup pages
+      const currentPath = window.location.pathname;
+      if (
+        !currentPath.includes("/login") &&
+        !currentPath.includes("/signup") &&
+        !currentPath.includes("/auth/google")
+      ) {
+        window.location.href = "/login";
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 // --- AUTH API'S ---
 
 // GOOGLE AUTH

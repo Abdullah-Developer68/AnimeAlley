@@ -5,6 +5,18 @@ const dbConnect = require("../config/dbConnect.js");
 
 const clientUrl = process.env.CLIENT_URL;
 
+// Utility function to extract token from Authorization header or cookies
+const extractToken = (req) => {
+  // First, try to get token from Authorization header (Bearer token)
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    return authHeader.substring(7); // Remove 'Bearer ' prefix
+  }
+
+  // Fallback to cookie-based token
+  return req.cookies.token;
+};
+
 // Centralized cookie options - same as auth service
 const getCookieOptions = () => {
   const isProduction = process.env.NODE_ENV === "production";
@@ -82,11 +94,13 @@ const handleGoogleCallback = (req, res, next) => {
         process.env.JWT_KEY
       );
 
-      // Set JWT token in cookie (same as local auth)
+      // Set JWT token in cookie as fallback (same as local auth)
       res.cookie("token", token, getCookieOptions());
 
-      // Redirect to client
-      return res.redirect(`${clientUrl}/`);
+      // Redirect to client with token as query parameter for localStorage storage
+      return res.redirect(
+        `${clientUrl}/auth/google/success?token=${encodeURIComponent(token)}`
+      );
     } catch (tokenError) {
       console.error("JWT token creation error:", tokenError);
       return res.redirect(`${clientUrl}/login`);
@@ -135,8 +149,8 @@ const LogoutFromGoogle = async (req, res) => {
  */
 const sendUserData = async (req, res) => {
   try {
-    // Pure JWT authentication - same as verifyToken
-    const token = req.cookies.token;
+    // Use utility function to extract token from Authorization header or cookies
+    const token = extractToken(req);
 
     if (!token) {
       return res.status(401).json({

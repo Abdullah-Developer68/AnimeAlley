@@ -9,6 +9,18 @@ dotenv.config();
 
 const secretKey = process.env.JWT_KEY;
 
+// Utility function to extract token from Authorization header or cookies
+const extractToken = (req) => {
+  // First, try to get token from Authorization header (Bearer token)
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    return authHeader.substring(7); // Remove 'Bearer ' prefix
+  }
+
+  // Fallback to cookie-based token
+  return req.cookies.token;
+};
+
 // Centralized cookie configuration for consistent JWT-only auth
 const getCookieOptions = () => {
   const isProduction = process.env.NODE_ENV === "production";
@@ -99,9 +111,13 @@ const signUp = async (req, res) => {
       secretKey
     );
 
+    // Set cookie as fallback (for compatibility)
     res.cookie("token", token, getCookieOptions());
+
+    // Send token in response body for localStorage storage
     res.status(201).json({
       success: true,
+      token, // Include token in response for localStorage
       user: {
         id: user._id,
         username: user.username,
@@ -176,6 +192,7 @@ const login = async (req, res) => {
       secretKey
     );
 
+    // Set cookie as fallback (for compatibility)
     res.cookie("token", token, getCookieOptions());
 
     const user = {
@@ -186,9 +203,10 @@ const login = async (req, res) => {
       profilePic: userExist.profilePic,
     };
 
-    // Send login success response
+    // Send login success response with token for localStorage
     res.status(200).json({
       success: true,
+      token, // Include token in response for localStorage
       user,
       message: "You have been logged in!",
     });
@@ -227,7 +245,8 @@ const logout = (req, res) => {
 const verifyToken = async (req, res) => {
   dbConnect();
   try {
-    const token = req.cookies.token;
+    // Use utility function to extract token from Authorization header or cookies
+    const token = extractToken(req);
     if (!token) {
       return res
         .status(401)
