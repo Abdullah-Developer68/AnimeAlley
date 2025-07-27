@@ -199,6 +199,7 @@ const login = async (req, res) => {
 };
 
 const logout = (req, res) => {
+  dbConnect();
   try {
     // Clear JWT cookie (works for both local and Google auth)
     const clearCookieOptions = {
@@ -207,7 +208,7 @@ const logout = (req, res) => {
       maxAge: 0,
     };
 
-    res.cookie("token", "", clearCookieOptions);
+    res.cookie("token", "", clearCookieOptions); // token gets cleared as it is given a data in the past
 
     res.status(200).json({
       success: true,
@@ -224,6 +225,7 @@ const logout = (req, res) => {
 
 //  helps to stay logged in even after refreshing the page
 const verifyToken = async (req, res) => {
+  dbConnect();
   try {
     const token = req.cookies.token;
     if (!token) {
