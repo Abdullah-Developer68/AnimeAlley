@@ -4,10 +4,9 @@ const mongoose = require("mongoose");
 const reservationModel = require("../models/reservation.model.js");
 const orderModel = require("../models/order.model.js");
 const userModel = require("../models/user.model.js");
-const productModel = require("../models/product.model.js");
 const couponModel = require("../models/coupon.model.js");
-dotenv.config();
 const dbConnect = require("../config/dbConnect.js");
+dotenv.config();
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const webHookSecretKey = process.env.STRIPE_WEBHOOK_SECRET;
