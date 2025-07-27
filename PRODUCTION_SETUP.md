@@ -1,4 +1,13 @@
-# Production Environment Setup for Cross-Domain Authentication
+# Pure JWT Authentication Setup for Cross-Domain Deployment
+
+## Authentication Strategy: Pure JWT (No Sessions)
+
+Both local authentication and Google OAuth now use JWT tokens stored in cookies.
+
+- Google OAuth: Uses Passport with custom callback (no sessions)
+- Local Auth: Direct JWT creation and cookie storage
+- Token Verification: JWT decode from cookies
+- Logout: Simple cookie clearing (no session destruction)
 
 ## Required Environment Variables
 
@@ -12,15 +21,12 @@ JWT_KEY=your_super_secure_jwt_secret_key_here
 # Database
 MONGODB_URI=your_mongodb_connection_string
 
-# Client URLs (CRITICAL for CORS)
-CLIENT_URL=https://your-client-domain.vercel.app
-CLIENT_URL_PRODUCTION=https://your-production-client-domain.com
+# Client URL (CRITICAL for CORS)
+CLIENT_URL=https://anime-alley-beige.vercel.app
 
 # Cookie Domain Configuration (CRITICAL for cross-domain)
-# Set this to your server domain for cross-domain cookie sharing
-COOKIE_DOMAIN=.your-server-domain.com
-# Example: If server is at api.myapp.com, set COOKIE_DOMAIN=.myapp.com
-# This allows cookies to be shared across subdomains
+# For Vercel subdomains: use .vercel.app
+COOKIE_DOMAIN=.vercel.app
 
 # Google OAuth (if using)
 GOOGLE_CLIENT_ID=your_google_client_id
@@ -42,10 +48,12 @@ VITE_API_BASE_URL=https://your-server-domain.vercel.app
 ## Cookie Configuration Explanation
 
 ### Development vs Production
+
 - **Development**: Same-origin (localhost) - cookies work normally
 - **Production**: Cross-origin - requires special configuration
 
 ### Cookie Security Settings
+
 ```javascript
 {
   httpOnly: true,           // Prevents XSS attacks
@@ -60,11 +68,13 @@ VITE_API_BASE_URL=https://your-server-domain.vercel.app
 ## CORS Configuration
 
 ### Allowed Origins
+
 - Add your production client URL to `CLIENT_URL_PRODUCTION`
 - Ensure both development and production URLs are included
-- Remove wildcards (*) in production for security
+- Remove wildcards (\*) in production for security
 
 ### Required Headers
+
 - `credentials: true` - Essential for cookie transmission
 - `Access-Control-Allow-Credentials: true`
 - Specific origin domains (no wildcards with credentials)
@@ -72,6 +82,7 @@ VITE_API_BASE_URL=https://your-server-domain.vercel.app
 ## Deployment Checklist
 
 ### Before Deployment
+
 - [ ] Set all environment variables in production
 - [ ] Verify HTTPS is enabled on both client and server
 - [ ] Test cookie domain configuration
@@ -79,6 +90,7 @@ VITE_API_BASE_URL=https://your-server-domain.vercel.app
 - [ ] Check JWT secret is secure and different from development
 
 ### After Deployment
+
 - [ ] Test login/logout functionality
 - [ ] Verify cookies are being set in browser dev tools
 - [ ] Check cross-origin requests work
@@ -88,17 +100,20 @@ VITE_API_BASE_URL=https://your-server-domain.vercel.app
 ## Troubleshooting Common Issues
 
 ### Cookies Not Being Set
+
 1. Check HTTPS is enabled
 2. Verify `sameSite: "none"` with `secure: true`
 3. Confirm COOKIE_DOMAIN matches your server domain
 4. Check CORS credentials configuration
 
 ### Cross-Origin Errors
+
 1. Verify CLIENT_URL matches exactly (no trailing slashes)
 2. Check `withCredentials: true` in axios config
 3. Ensure server allows credentials in CORS
 
 ### Token Not Persisting
+
 1. Check cookie expiration settings
 2. Verify domain configuration
 3. Test in incognito mode to rule out browser cache
@@ -106,6 +121,7 @@ VITE_API_BASE_URL=https://your-server-domain.vercel.app
 ## Security Considerations
 
 ### Production Security
+
 - Use strong JWT secrets (minimum 32 characters)
 - Enable HTTPS on all domains
 - Set appropriate cookie expiration
@@ -113,6 +129,7 @@ VITE_API_BASE_URL=https://your-server-domain.vercel.app
 - Use environment-specific configurations
 
 ### Cookie Security
+
 - `httpOnly: true` prevents XSS
 - `secure: true` ensures HTTPS only
 - `sameSite: "none"` for cross-origin (with secure)

@@ -9,7 +9,7 @@ dotenv.config();
 
 const secretKey = process.env.JWT_KEY;
 
-// Centralized cookie options for consistency across all auth functions
+// Centralized cookie configuration for consistent JWT-only auth
 const getCookieOptions = () => {
   const isProduction = process.env.NODE_ENV === "production";
 
@@ -19,7 +19,6 @@ const getCookieOptions = () => {
     sameSite: isProduction ? "none" : "lax",
     path: "/",
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    // Add domain for production cross-origin setup
     ...(isProduction &&
       process.env.COOKIE_DOMAIN && {
         domain: process.env.COOKIE_DOMAIN,
@@ -100,7 +99,7 @@ const signUp = async (req, res) => {
       secretKey
     );
 
-    res.cookie("authToken", token, getCookieOptions());
+    res.cookie("token", token, getCookieOptions());
     res.status(201).json({
       success: true,
       user: {
@@ -177,7 +176,7 @@ const login = async (req, res) => {
       secretKey
     );
 
-    res.cookie("authToken", token, getCookieOptions());
+    res.cookie("token", token, getCookieOptions());
 
     const user = {
       id: userExist._id,
@@ -201,14 +200,14 @@ const login = async (req, res) => {
 
 const logout = (req, res) => {
   try {
-    // Clear the cookie with same options as when it was set
+    // Clear JWT cookie (works for both local and Google auth)
     const clearCookieOptions = {
       ...getCookieOptions(),
       expires: new Date(0),
       maxAge: 0,
     };
 
-    res.cookie("authToken", "", clearCookieOptions);
+    res.cookie("token", "", clearCookieOptions);
 
     res.status(200).json({
       success: true,
@@ -226,7 +225,7 @@ const logout = (req, res) => {
 //  helps to stay logged in even after refreshing the page
 const verifyToken = async (req, res) => {
   try {
-    const token = req.cookies.authToken;
+    const token = req.cookies.token;
     if (!token) {
       return res
         .status(401)

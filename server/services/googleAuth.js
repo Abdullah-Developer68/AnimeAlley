@@ -5,7 +5,7 @@ const dbConnect = require("../config/dbConnect.js");
 
 const clientUrl = process.env.CLIENT_URL;
 
-// Centralized cookie options for consistency with auth service
+// Centralized cookie options - same as auth service
 const getCookieOptions = () => {
   const isProduction = process.env.NODE_ENV === "production";
 
@@ -15,7 +15,6 @@ const getCookieOptions = () => {
     sameSite: isProduction ? "none" : "lax",
     path: "/",
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    // Add domain for production cross-origin setup
     ...(isProduction &&
       process.env.COOKIE_DOMAIN && {
         domain: process.env.COOKIE_DOMAIN,
@@ -57,30 +56,42 @@ const handleGoogleCallback = (req, res, next) => {
     process.env.NODE_ENV === "production"
       ? process.env.CLIENT_URL
       : "http://localhost:5173";
-  passport.authenticate("google", {
-    failureRedirect: `${clientUrl}/login`,
-    session: true,
-  })(req, res, (err) => {
+
+  // Use custom callback to avoid session requirement
+  passport.authenticate("google", { session: false }, (err, user, info) => {
     if (err) {
-      return next(err);
+      console.error("Google authentication error:", err);
+      return res.redirect(`${clientUrl}/login`);
     }
-    if (req.user) {
-      // User is authenticated, create a JWT token
+
+    if (!user) {
+      console.error("No user returned from Google auth");
+      return res.redirect(`${clientUrl}/login`);
+    }
+
+    try {
+      // Create JWT token with user data (same structure as local auth)
       const token = jwt.sign(
         {
-          userid: req.user._id,
-          email: req.user.email,
-          profilePic: req.user.profilePic,
-          role: req.user.role,
+          userid: user._id,
+          email: user.email,
+          username: user.username,
+          profilePic: user.profilePic,
+          role: user.role,
         },
         process.env.JWT_KEY
       );
-      // Set the token in a cookie
-      res.cookie("authToken", token, getCookieOptions());
+
+      // Set JWT token in cookie (same as local auth)
+      res.cookie("token", token, getCookieOptions());
+
+      // Redirect to client
       return res.redirect(`${clientUrl}/`);
+    } catch (tokenError) {
+      console.error("JWT token creation error:", tokenError);
+      return res.redirect(`${clientUrl}/login`);
     }
-    res.redirect(`${clientUrl}/login`);
-  });
+  })(req, res, next);
 };
 
 /**
@@ -95,22 +106,20 @@ const handleGoogleCallback = (req, res, next) => {
  */
 const LogoutFromGoogle = async (req, res) => {
   try {
-    req.logout((err) => {
-      if (err) {
-        return res.status(500).json({ message: "Failed to Logout" });
-      }
-      req.session.destroy((err) => {
-        if (err) {
-          return res
-            .status(500)
-            .json({ success: false, message: "Error destroying session" });
-        }
-        res.clearCookie("connect.sid");
-        res.redirect(process.env.CLIENT_URL);
-      });
-    });
+    // Pure JWT logout - same as main logout function
+    const clearCookieOptions = {
+      ...getCookieOptions(),
+      expires: new Date(0),
+      maxAge: 0,
+    };
+
+    res.cookie("token", "", clearCookieOptions);
+
+    // Redirect to client after clearing JWT cookie
+    res.redirect(process.env.CLIENT_URL || clientUrl);
   } catch (error) {
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error("Google logout error:", error);
+    res.status(500).json({ success: false, message: "Logout failed" });
   }
 };
 
@@ -125,59 +134,49 @@ const LogoutFromGoogle = async (req, res) => {
  * 4. Handles error cases appropriately
  */
 const sendUserData = async (req, res) => {
-  dbConnect();
   try {
-    // First check session-based authentication (Google OAuth)
-    if (req.isAuthenticated() && req.user) {
-      res.status(200).json({
-        success: true,
-        user: {
-          id: req.user._id,
-          username: req.user.username,
-          email: req.user.email,
-          profilePic: req.user.profilePic,
-          role: req.user.role,
-        },
+    // Pure JWT authentication - same as verifyToken
+    const token = req.cookies.token;
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "No authentication token found",
       });
-      return;
     }
 
-    // If no session, check for JWT token (for users who logged in via Google and got JWT)
-    const token = req.cookies.authToken;
-    if (token) {
-      try {
-        const decoded = jwt.verify(token, process.env.JWT_KEY);
-        const user = await require("../models/user.model.js").findById(
-          decoded.userid
-        );
+    const decoded = jwt.verify(token, process.env.JWT_KEY);
 
-        if (user) {
-          res.status(200).json({
-            success: true,
-            user: {
-              id: user._id,
-              username: user.username,
-              email: user.email,
-              profilePic: user.profilePic,
-              role: user.role,
-            },
-          });
-          return;
-        }
-      } catch (jwtError) {
-        // ignore
-      }
-    }
-
-    // No authentication found
-    return res.status(200).json({
-      success: false,
-      message: "Not authenticated",
+    res.status(200).json({
+      success: true,
+      user: {
+        id: decoded.userid,
+        username: decoded.username,
+        email: decoded.email,
+        profilePic: decoded.profilePic,
+        role: decoded.role,
+      },
     });
   } catch (error) {
+    console.error("Token verification error:", error);
+
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid authentication token",
+      });
+    }
+
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication token expired",
+      });
+    }
+
     return res.status(500).json({
       success: false,
-      message: "Internal server error",
+      message: "Authentication failed",
     });
   }
 };

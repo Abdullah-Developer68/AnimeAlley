@@ -2,14 +2,13 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 dotenv.config();
 
-// Define allowed origins with environment validation
+// Define allowed origins for pure JWT cross-domain auth
 const allowedOrigins = [
   process.env.CLIENT_URL,
-  process.env.CLIENT_URL_PRODUCTION, // Add production client URL
   "http://localhost:5173",
   "http://localhost:3000",
-  "https://localhost:3000", // HTTPS localhost for testing
-].filter(Boolean); // Remove undefined values
+  "https://localhost:3000",
+].filter(Boolean);
 
 // Enhanced CORS middleware for cross-domain production
 const corsMiddleware = cors({

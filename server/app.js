@@ -1,7 +1,7 @@
 const express = require("express");
 const dbConnect = require("./config/dbConnect.js");
 const dotenv = require("dotenv");
-const passport = require("./config/passport/passport.js"); // Initialize Passport configuration
+const passport = require("./config/passport/passport.js"); // Still needed for Google OAuth
 const validateEnvironment = require("./utils/validateEnvironment.js");
 
 dotenv.config(); // Load environment variables from .env file
@@ -31,8 +31,8 @@ require("./utils/cleanUpUsers.js"); // automaically cleans unverified users that
 require("./utils/cleanUpReservation.js"); // automatically cleans up expired reservations
 
 // Custom middlewares
-app.use(passport.initialize());
-app.use(passport.session());
+app.use(passport.initialize()); // Still needed for Google OAuth
+// app.use(passport.session()); // Removed - using JWT instead of sessions
 app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // Serve static files from the "uploads" directory
 
 // Import all routes
