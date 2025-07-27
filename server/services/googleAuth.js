@@ -12,8 +12,7 @@ const getCookieOptions = () => {
   return {
     httpOnly: true,
     secure: isProduction,
-    // sameSite: isProduction ? "none" : "lax",
-    sameSite: "lax",
+    sameSite: isProduction ? "none" : "lax", // "none" required for cross-domain
     path: "/",
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     ...(isProduction &&
