@@ -1,0 +1,95 @@
+import { createContext, useEffect, useState } from "react";
+import PropTypes from "prop-types";
+import api from "../api/api";
+
+const AuthContext = createContext();
+
+// Manages authentication state and provides it to all child components
+// through React Context. Initializes auth state from localStorage if available.
+
+const AuthProvider = ({ children }) => {
+  const userInfo = localStorage.getItem("userInfo");
+  const [user, setUser] = useState(userInfo ? JSON.parse(userInfo) : null);
+  const [loading, setLoading] = useState(true);
+  console.log("AuthProvider initialized with user:", user);
+
+  // Helper to set user and localStorage
+  const setUserAndStorage = (userData) => {
+    setUser(userData);
+    if (userData) {
+      localStorage.setItem("userInfo", JSON.stringify(userData));
+    } else {
+      localStorage.removeItem("userInfo");
+    }
+  };
+
+  // Try Google auth as a fallback
+  const tryGoogleAuth = async () => {
+    try {
+      const googleRes = await api.googleAuthSuccess();
+      if (googleRes.data.success) {
+        setUserAndStorage(googleRes.data.user);
+        return true;
+      }
+    } catch (googleError) {
+      if (googleError.response?.status === 401) {
+        console.log("Google token expired or invalid, clearing auth data");
+      } else {
+        console.error("Google auth check error:", googleError);
+      }
+    }
+    setUserAndStorage(null);
+    return false;
+  };
+
+  // Main auth check
+  const checkAuthStatus = async () => {
+    try {
+      // check for JWT auth first for the local Signup
+      const res = await api.verifyAuth();
+      if (res.data.success) {
+        setUserAndStorage(res.data.user);
+        return;
+      }
+    } catch (error) {
+      if (error.response?.status === 401) {
+        // Try Google auth if JWT fails
+        const googleSuccess = await tryGoogleAuth();
+        if (googleSuccess) return;
+        // If Google also fails, clear user
+        setUserAndStorage(null);
+        return;
+      }
+      // Other errors
+      console.error("Auth check error:", error);
+      setUserAndStorage(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (userInfo || loading) {
+      checkAuthStatus();
+    } else {
+      setLoading(false);
+    }
+    // eslint-disable-next-line
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{ user, setUser: setUserAndStorage, loading }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+// prop validation
+AuthProvider.propTypes = {
+  children: PropTypes.oneOfType([
+    PropTypes.arrayOf(PropTypes.node),
+    PropTypes.node,
+  ]).isRequired,
+};
+
+export { AuthProvider, AuthContext };
