@@ -129,7 +129,7 @@ const login = async (req, res) => {
       });
     }
 
-    const passwordMatch = await bcrypt.compare(password, userExist.password);
+    const passwordMatch = bcrypt.compare(password, userExist.password);
     if (!passwordMatch) {
       return res.status(401).json({
         status: false,
@@ -145,7 +145,7 @@ const login = async (req, res) => {
     const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // none for cross-site & lax for same-site
       path: "/",
     };
     if (process.env.NODE_ENV === "production" && process.env.DOMAIN) {
