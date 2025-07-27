@@ -51,5 +51,5 @@ app.get("/", (req, res) => {
 app.listen(port, () => {
   console.log(`Server is running at: http://localhost:${port}`);
 });
-app.set("trust proxy", 1); // set trust proxy to true for Vercel
+
 module.exports = app; // <-- Add this line for Vercel

@@ -15,10 +15,10 @@ const getCookieOptions = () => {
     sameSite: "lax",
     path: "/",
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    ...(isProduction &&
-      process.env.COOKIE_DOMAIN && {
-        domain: process.env.COOKIE_DOMAIN,
-      }),
+    // ...(isProduction &&
+    //   process.env.COOKIE_DOMAIN && {
+    //     domain: process.env.COOKIE_DOMAIN,
+    //   }),
   };
 };
 
