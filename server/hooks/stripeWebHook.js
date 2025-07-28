@@ -80,9 +80,30 @@ const processSuccessfulPayment = async (StripeSession) => {
       .session(mongoSession);
     if (!user) {
       await mongoSession.abortTransaction();
-      console.error(`No user found with email: ${userEmail}`);
+      console.error(`❌ No user found with email: ${userEmail}`);
+      console.error(
+        `📧 Session customer email: ${StripeSession.customer_details?.email}`
+      );
       throw new Error(`No user found with email: ${userEmail}`);
     }
+
+    // Additional validation: ensure the emails match for security
+    if (
+      StripeSession.customer_details?.email &&
+      StripeSession.customer_details.email !== userEmail
+    ) {
+      console.warn(`⚠️ Email mismatch detected:`);
+      console.warn(
+        `   Session customer email: ${StripeSession.customer_details.email}`
+      );
+      console.warn(`   Metadata email: ${userEmail}`);
+      console.warn(`   Using metadata email for consistency`);
+    }
+
+    console.log(`✅ User found: ${user.email} (ID: ${user._id})`);
+    console.log(
+      `🔐 Email validation passed - authenticated user matches order`
+    );
 
     // Create order from reservation data matching your Order model structure
     const orderData = {

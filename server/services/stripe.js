@@ -1,4 +1,5 @@
 const Stripe = require("stripe");
+const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 const reservationModel = require("../models/reservation.model.js");
 const dbConnect = require("../config/dbConnect.js");
@@ -9,12 +10,54 @@ dotenv.config();
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 const createCheckoutSession = async (req, res) => {
-  dbConnect();
+  await dbConnect();
+
+  // Extract user email from JWT token (authentication required)
+  let authenticatedUserEmail;
+
+  try {
+    // First, try to get token from Authorization header (localStorage method)
+    const authHeader = req.headers.authorization;
+    let token;
+
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7);
+    } else {
+      // Fallback to cookie-based token
+      token = req.cookies.token;
+    }
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required for checkout",
+      });
+    }
+
+    // Verify and decode the JWT token
+    const decoded = jwt.verify(token, process.env.JWT_KEY);
+    authenticatedUserEmail = decoded.email;
+
+    if (!authenticatedUserEmail) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid authentication token - no email found",
+      });
+    }
+
+    console.log(`🔐 Authenticated user email: ${authenticatedUserEmail}`);
+  } catch (error) {
+    console.error("JWT verification error:", error.message);
+    return res.status(401).json({
+      success: false,
+      message: "Invalid or expired authentication token",
+    });
+  }
 
   const {
     cartId,
     couponCode,
-    userEmail,
+    // Removed userEmail from destructuring - using authenticatedUserEmail instead
     originalTotal,
     finalTotal,
     discountAmount,
@@ -66,21 +109,26 @@ const createCheckoutSession = async (req, res) => {
 
     // Get coupon info for display (if provided)
     let appliedCoupon = null;
-    if (couponCode && userEmail) {
+    if (couponCode && authenticatedUserEmail) {
       appliedCoupon = await couponModel.findOne({ couponCode });
     }
 
-    // Create checkout session configuration
+    // Create checkout session configuration with locked email
     const sessionConfig = {
       payment_method_types: ["card"],
       mode: "payment",
       line_items: lineItems,
       success_url: `${process.env.CLIENT_URL}/success`,
       cancel_url: `${process.env.CLIENT_URL}/cart`,
+
+      // Lock the customer email to the authenticated user's email
+      customer_creation: "always",
+      customer_email: authenticatedUserEmail,
+
       metadata: {
         cartId: cartId,
         couponCode: couponCode || "",
-        userEmail: userEmail || "",
+        userEmail: authenticatedUserEmail, // Use authenticated email
         discountAmount: discountAmount || "0",
         originalTotal: originalTotal || calculatedSubtotal.toFixed(2),
         finalTotal: finalTotal || calculatedSubtotal.toFixed(2),

@@ -252,7 +252,7 @@ api.decrementReservationStock = (cartId, productId, variant, quantity) => {
 api.createCheckOutSession = (
   cartId,
   couponCode,
-  userEmail,
+  // Removed userEmail parameter - server extracts from JWT token
   originalTotal,
   finalTotal,
   discountAmount,
@@ -262,7 +262,7 @@ api.createCheckOutSession = (
   return api.post("/stripe/create-checkout-session", {
     cartId,
     couponCode,
-    userEmail,
+    // Removed userEmail from request body - server uses authenticated user's email
     originalTotal,
     finalTotal,
     discountAmount,

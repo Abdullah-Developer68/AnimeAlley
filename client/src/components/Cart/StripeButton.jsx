@@ -20,8 +20,7 @@ const StripeButton = () => {
   const originalTotal = subtotal + shippingCost;
   const discountAmount = originalTotal - finalCost;
 
-  // Get user info and delivery address from localStorage
-  const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+  // Get delivery address from localStorage (user email extracted from JWT on server)
   const deliveryAddress = localStorage.getItem("deliveryAddress") || "";
   console.log("Delivery address being sent to backend:", deliveryAddress);
   const handleClick = async () => {
@@ -34,7 +33,7 @@ const StripeButton = () => {
       const res = await api.createCheckOutSession(
         getOrCreateCartId(),
         couponCode,
-        userInfo?.email,
+        // Removed userInfo?.email - server will extract from JWT token
         originalTotal,
         finalCost,
         discountAmount,
