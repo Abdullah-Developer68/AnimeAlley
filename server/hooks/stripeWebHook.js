@@ -10,13 +10,42 @@ dotenv.config();
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const webHookSecretKey = process.env.STRIPE_WEBHOOK_SECRET;
+const processedSessions = new Set(); // In-memory store for processed sessions
 
 const processSuccessfulPayment = async (StripeSession) => {
-  dbConnect();
-  const mongoSession = await mongoose.startSession();
+  console.log("Webhook: Starting payment processing");
+  console.log("Mongoose connection state:", mongoose.connection.readyState);
+  // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+
+  await dbConnect(); // Wait for database connection to be established
+  console.log("After dbConnect call, state:", mongoose.connection.readyState);
+
+  const mongoSession = await mongoose.startSession(); // Should work now
+
+  // Prevent double processing
+  if (processedSessions.has(StripeSession.id)) {
+    console.log(`Session ${StripeSession.id} already processed, skipping`);
+    return;
+  }
 
   try {
     mongoSession.startTransaction();
+
+    // Mark session as being processed
+    processedSessions.add(StripeSession.id);
+
+    // Check if order already exists for this session
+    const existingOrder = await orderModel
+      .findOne({
+        stripeSessionId: StripeSession.id,
+      })
+      .session(mongoSession);
+
+    if (existingOrder) {
+      console.log(`Order already exists for session ${StripeSession.id}`);
+      await mongoSession.abortTransaction();
+      return;
+    }
 
     const {
       cartId,
@@ -58,6 +87,7 @@ const processSuccessfulPayment = async (StripeSession) => {
     // Create order from reservation data matching your Order model structure
     const orderData = {
       orderID: `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      stripeSessionId: StripeSession.id, // Add this field
       products: reservation.products.map((item) => ({
         productId: item.productId._id,
         quantity: item.quantity,
@@ -141,6 +171,8 @@ const processSuccessfulPayment = async (StripeSession) => {
       `✅ Order ${savedOrder.orderID} created successfully for cart ${cartId}`
     );
   } catch (error) {
+    // Remove from processed set if transaction fails
+    processedSessions.delete(StripeSession.id);
     await mongoSession.abortTransaction();
     console.error("❌ Transaction failed for cart:", cartId, error);
     throw error;
@@ -150,7 +182,7 @@ const processSuccessfulPayment = async (StripeSession) => {
 };
 
 const handleStripeWebhook = async (req, res) => {
-  dbConnect();
+  await dbConnect(); // Wait for database connection to be established
   const sig = req.headers["stripe-signature"];
   let event;
 
@@ -175,17 +207,49 @@ const handleStripeWebhook = async (req, res) => {
     }
   }
 
-  // Handle failed payments
-  if (event.type === "checkout.session.expired") {
+  // Handle failed payments - DO NOT cancel reservations (user can still pay with COD)
+  if (
+    event.type === "checkout.session.async_payment_failed" ||
+    event.type === "payment_intent.payment_failed"
+  ) {
     const session = event.data.object;
-    const { cartId } = session.metadata;
+    const { cartId, userEmail: metadataUserEmail } = session.metadata || {};
+
+    try {
+      // Log the failed payment but keep reservation intact
+      const userEmail = session.customer_details?.email || metadataUserEmail;
+
+      console.log(`💳 Payment failed for cart: ${cartId}, user: ${userEmail}`);
+      console.log(
+        `🛒 Reservation preserved - user can still pay with Cash on Delivery`
+      );
+
+      // Just log the failure - don't modify reservation model
+      console.log(`📝 Payment failure logged for tracking: ${event.type}`);
+    } catch (error) {
+      console.error("❌ Error logging failed payment:", error);
+      // Don't throw error - this shouldn't block webhook processing
+    }
   }
 
-  // Log other webhook events for debugging
-  if (
-    event.type !== "checkout.session.completed" &&
-    event.type !== "checkout.session.expired"
-  ) {
+  // Handle expired sessions - Just log, don't delete reservations
+  if (event.type === "checkout.session.expired") {
+    const session = event.data.object;
+    const { cartId, userEmail: metadataUserEmail } = session.metadata || {};
+
+    try {
+      const userEmail = session.customer_details?.email || metadataUserEmail;
+
+      console.log(
+        `⏰ Checkout session expired for cart: ${cartId}, user: ${userEmail}`
+      );
+      console.log(
+        `🛒 Reservation preserved - will be auto-cleaned by cleanup script after 2 days`
+      );
+    } catch (error) {
+      console.error("❌ Error logging expired session:", error);
+      // Don't throw error - this shouldn't block webhook processing
+    }
   }
 
   res.json({ received: true });

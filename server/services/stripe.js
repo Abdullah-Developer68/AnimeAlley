@@ -1,6 +1,7 @@
 const Stripe = require("stripe");
 const dotenv = require("dotenv");
 const reservationModel = require("../models/reservation.model.js");
+const dbConnect = require("../config/dbConnect.js");
 const couponModel = require("../models/coupon.model.js");
 dotenv.config();
 
@@ -8,6 +9,8 @@ dotenv.config();
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 const createCheckoutSession = async (req, res) => {
+  dbConnect();
+
   const {
     cartId,
     couponCode,
