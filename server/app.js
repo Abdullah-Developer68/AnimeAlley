@@ -1,7 +1,7 @@
 const express = require("express");
 const dbConnect = require("./config/dbConnect.js");
 const dotenv = require("dotenv");
-const passport = require("./config/passport/passport.js"); // Still needed for Google OAuth
+const passport = require("./config/passport/passport.js");
 const validateEnvironment = require("./utils/validateEnvironment.js");
 
 dotenv.config(); // Load environment variables from .env file
@@ -11,6 +11,8 @@ validateEnvironment();
 const path = require("path"); // Use path module for file paths
 const port = process.env.PORT;
 const app = express();
+
+dbConnect();
 
 // Stripe webhook must be registered before any body parser middleware because Stripe webhooks
 // must use raw body parsing while regular API routes use JSON body parsing to handle requests
@@ -37,8 +39,6 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // Serve s
 
 // Import all routes
 const routes = require("./routes/index.routes.js");
-
-dbConnect();
 
 // Routes
 app.use("/api", routes);
