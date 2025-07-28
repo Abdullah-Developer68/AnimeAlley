@@ -105,9 +105,14 @@ const processSuccessfulPayment = async (StripeSession) => {
       orderDate: new Date(),
     };
 
-    // Create the order
+    console.log(
+      "📝 Creating order with data:",
+      JSON.stringify(orderData, null, 2)
+    );
     const order = new orderModel(orderData);
+    console.log("💾 Saving order to database...");
     const savedOrder = await order.save({ session: mongoSession });
+    console.log("✅ Order saved with ID:", savedOrder._id);
 
     // Handle coupon usage if coupon was used
     if (couponCode) {
@@ -165,7 +170,9 @@ const processSuccessfulPayment = async (StripeSession) => {
     await reservationModel.deleteOne({ cartId }, { session: mongoSession });
 
     // Commit the transaction
+    console.log("🔄 Committing transaction...");
     await mongoSession.commitTransaction();
+    console.log("✅ Transaction committed successfully");
 
     console.log(
       `✅ Order ${savedOrder.orderID} created successfully for cart ${cartId}`

@@ -9,12 +9,15 @@ const {
   getOrderStats,
 } = require("../../controllers/order.controller.js");
 
+// POST
 router.post("/placeOrder", placeOrder);
-
+// GET
 router.get("/getOrders", getOrderHistory);
 router.get("/allOrdersList", allOrdersList);
-router.delete("/delete/:orderId", deleteOrder);
-router.put("/update/:orderId", updateOrder);
 router.get("/orderStats", getOrderStats);
+// DELETE
+router.delete("/delete/:orderId", deleteOrder);
+// UPDATE
+router.put("/update/:orderId", updateOrder);
 
 module.exports = router;
