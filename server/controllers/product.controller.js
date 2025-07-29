@@ -1,6 +1,73 @@
 const productModel = require("../models/product.model.js");
 const dbConnect = require("../config/dbConnect.js");
 
+/**
+ * Generate unique product ID based on category
+ * @param {string} category - Product category (comics, toys, clothes, shoes)
+ * @returns {Promise<string>} - Generated unique product ID
+ */
+const generateProductID = async (category) => {
+  try {
+    // Define category prefixes
+    const categoryPrefixes = {
+      comics: "C",
+      toys: "T",
+      clothes: "CL",
+      shoes: "S",
+    };
+
+    const prefix = categoryPrefixes[category.toLowerCase()];
+    if (!prefix) {
+      throw new Error(`Invalid category: ${category}`);
+    }
+
+    // Find all existing product IDs for this category
+    const existingProducts = await productModel
+      .find({
+        productID: { $regex: `^${prefix}\\d+$` },
+      })
+      .select("productID")
+      .sort({ productID: 1 });
+
+    // Extract numbers and find the next available ID
+    let nextNumber = 1;
+    const existingNumbers = existingProducts
+      .map((product) => {
+        const match = product.productID.match(new RegExp(`^${prefix}(\\d+)$`));
+        return match ? parseInt(match[1]) : 0;
+      })
+      .filter((num) => num > 0)
+      .sort((a, b) => a - b);
+
+    // Find the first gap or use the next sequential number
+    for (let i = 0; i < existingNumbers.length; i++) {
+      if (existingNumbers[i] !== nextNumber) {
+        break;
+      }
+      nextNumber++;
+    }
+
+    const generatedID = `${prefix}${nextNumber}`;
+
+    // Double-check uniqueness (handle race conditions)
+    const existingProduct = await productModel.findOne({
+      productID: generatedID,
+    });
+    if (existingProduct) {
+      // If somehow the ID exists, recursively try again
+      return await generateProductID(category);
+    }
+
+    console.log(
+      `Generated product ID: ${generatedID} for category: ${category}`
+    );
+    return generatedID;
+  } catch (error) {
+    console.error("Error generating product ID:", error);
+    throw error;
+  }
+};
+
 const getProducts = async (req, res) => {
   dbConnect();
   try {
@@ -162,8 +229,8 @@ const createProduct = async (req, res) => {
     // Cloudinary returns the URL in req.file.path
     const imageUrl = req.file ? req.file.path : null;
 
+    // Remove productID from required fields validation since it's auto-generated
     if (
-      !req.body.productID ||
       !req.body.name ||
       !req.body.price ||
       !req.body.stock ||
@@ -175,8 +242,26 @@ const createProduct = async (req, res) => {
         message: "fields in data from client are missing",
       });
     }
+
+    // Validate category before generating ID
+    const validCategories = ["comics", "toys", "clothes", "shoes"];
+    if (!validCategories.includes(req.body.category.toLowerCase())) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid category: ${
+          req.body.category
+        }. Valid categories are: ${validCategories.join(", ")}`,
+      });
+    }
+
+    // Generate unique product ID based on category
+    const generatedProductID = await generateProductID(req.body.category);
+    console.log(
+      `Auto-generated Product ID: ${generatedProductID} for category: ${req.body.category}`
+    );
+
     const productData = {
-      productID: req.body.productID,
+      productID: generatedProductID, // Use auto-generated ID
       name: req.body.name,
       price: parseFloat(req.body.price),
       category: req.body.category,
@@ -228,7 +313,7 @@ const createProduct = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "Product created successfully",
+      message: `Product created successfully with ID: ${generatedProductID}`,
       product: newProduct,
     });
   } catch (error) {
@@ -256,6 +341,8 @@ const updateProduct = async (req, res) => {
         message: "Product image is required",
       });
     }
+    // For updates, we need the productID to identify which product to update
+    // But we don't generate a new one - we preserve the existing ID
     if (
       !req.body.productID ||
       !req.body.name ||
@@ -269,8 +356,10 @@ const updateProduct = async (req, res) => {
         message: "fields in data from client are missing",
       });
     }
+
+    // Preserve the existing productID for updates
     const productData = {
-      productID: req.body.productID,
+      productID: req.body.productID, // Keep existing ID
       name: req.body.name,
       price: parseFloat(req.body.price),
       category: req.body.category,
