@@ -25,16 +25,16 @@ const Navbar = () => {
         {/* Search and Auth */}
         <div className="flex items-center gap-2 md:gap-4">
           <Link to="/">
-            <img src={assets.homeIcon} />
+            <img src={assets.homeIcon} alt="home" />
           </Link>
           <Link to="/shop">
-            <img src={assets.shop} />
+            <img src={assets.shop} alt="shop" />
           </Link>
           <Link to="/cart">
-            <img src={assets.cart} />
+            <img src={assets.cart} alt="cart" />
           </Link>
           <Link to="/history">
-            <img src={assets.history} />
+            <img src={assets.history} alt="history" />
           </Link>
           {user && (user.role === "superAdmin" || user.role === "admin") && (
             <Link to="/dashboard">
