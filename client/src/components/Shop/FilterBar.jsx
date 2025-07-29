@@ -122,6 +122,9 @@ const FilterBar = () => {
       ) {
         dispatch(transferFilterData(formData));
       }
+
+      // Auto-close the filter bar after applying filters (similar to close button behavior)
+      dispatch(openFilterBar(false));
     } catch (error) {
       console.error("Error applying filters:", error);
     } finally {
@@ -184,14 +187,6 @@ const FilterBar = () => {
               {errors.searchQuery.message}
             </span>
           )}
-        </div>
-
-        {/* Current selected category */}
-        <div className="bg-white/5 p-3 rounded-lg">
-          <h4 className="text-white/70 text-sm mb-2">Current Category</h4>
-          <p className="text-yellow-500 font-medium capitalize">
-            {currCategory}
-          </p>
         </div>
 
         {/* Filters section */}

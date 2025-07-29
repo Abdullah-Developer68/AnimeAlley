@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import Cards from "../Global/Card";
 import Loader from "../Global/Loader";
 import api from "../../api/api";
+import ActiveFiltersDisplay from "./ActiveFiltersDisplay";
 
 const ProductGrid = () => {
   const [products, setProducts] = useState([]);
@@ -71,19 +72,28 @@ const ProductGrid = () => {
   console.log(products);
 
   return (
-    <div className="w-full h-[600px] overflow-auto">
-      {isLoading ? (
-        <div className="flex items-center justify-center h-full">
-          <Loader size="lg" />
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 p-2">
-          {/* Key prop helps React identify which items have changed, been added, or been removed in lists */}
-          {products.map((product) => (
-            <Cards key={product._id} product={product} />
-          ))}
-        </div>
-      )}
+    <div className="w-full">
+      {/* Active Filters Display */}
+      <ActiveFiltersDisplay
+        appliedFilters={appliedFilters}
+        currCategory={currCategory}
+      />
+
+      {/* Product Grid */}
+      <div className="w-full h-[600px] overflow-auto">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader size="lg" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 p-2">
+            {/* Key prop helps React identify which items have changed, been added, or been removed in lists */}
+            {products.map((product) => (
+              <Cards key={product._id} product={product} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

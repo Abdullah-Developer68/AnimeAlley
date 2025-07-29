@@ -11,6 +11,15 @@ const getProducts = async (req, res) => {
     const { category, productTypes, price, sortBy, page, searchQuery } =
       constraints;
 
+    console.log("Product filtering request:", {
+      category,
+      productTypes,
+      price,
+      sortBy,
+      page,
+      searchQuery,
+    });
+
     if (!category || !page) {
       return res.status(400).json({
         success: false,
@@ -32,17 +41,43 @@ const getProducts = async (req, res) => {
     }
 
     // Add filter to the query of the respective category
+    // Note: Using case-insensitive regex matching to handle frontend lowercase conversion
+    // Alternative optimization: normalize data storage to lowercase in database
     if (
       productTypes &&
       productTypes.length > 0 &&
       !productTypes.includes("all")
     ) {
       if (category === "comics") {
-        query.genres = { $in: productTypes };
+        // Use case-insensitive regex matching for genres
+        const genreRegexArray = productTypes.map(
+          (type) => new RegExp(`^${type}$`, "i")
+        );
+        query.genres = { $in: genreRegexArray };
+        console.log("Comics filter applied:", {
+          productTypes,
+          genreRegexArray,
+        });
       } else if (category === "clothes" || category === "shoes") {
-        query.merchType = { $in: productTypes };
+        // Use case-insensitive regex matching for merchType
+        const merchTypeRegexArray = productTypes.map(
+          (type) => new RegExp(`^${type}$`, "i")
+        );
+        query.merchType = { $in: merchTypeRegexArray };
+        console.log("Clothes/Shoes filter applied:", {
+          productTypes,
+          merchTypeRegexArray,
+        });
       } else if (category === "toys") {
-        query.toyType = { $in: productTypes };
+        // Use case-insensitive regex matching for toyType
+        const toyTypeRegexArray = productTypes.map(
+          (type) => new RegExp(`^${type}$`, "i")
+        );
+        query.toyType = { $in: toyTypeRegexArray };
+        console.log("Toys filter applied:", {
+          productTypes,
+          toyTypeRegexArray,
+        });
       }
     }
 
