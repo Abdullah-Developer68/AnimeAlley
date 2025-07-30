@@ -412,18 +412,19 @@ const Cart = () => {
               </div>
 
               {/* Checkout Button */}
-              {/* Place Order Button - Always visible but disabled until payment method is selected */}
-              <button
-                className={`w-full py-3 rounded-lg font-medium transition-all duration-300 text-sm sm:text-base mt-4 ${
-                  paymentMethod
-                    ? "bg-pink-500 text-black cursor-pointer hover:shadow-lg hover:shadow-pink-500/25"
-                    : "bg-gray-500 text-gray-300 cursor-not-allowed"
-                }`}
-                onClick={handlePlaceOrderClick}
-                disabled={!paymentMethod}
-              >
-                {paymentMethod ? "Place Order" : "Select Payment Method"}
-              </button>
+              {paymentMethod == "cod" && (
+                <button
+                  className={`w-full py-3 rounded-lg font-medium transition-all duration-300 text-sm sm:text-base mt-4 ${
+                    paymentMethod
+                      ? "bg-pink-500 text-black cursor-pointer hover:shadow-lg hover:shadow-pink-500/25"
+                      : "bg-gray-500 text-gray-300 cursor-not-allowed"
+                  }`}
+                  onClick={handlePlaceOrderClick}
+                  disabled={!paymentMethod}
+                >
+                  Place Order
+                </button>
+              )}
             </div>
           </div>
         </div>
