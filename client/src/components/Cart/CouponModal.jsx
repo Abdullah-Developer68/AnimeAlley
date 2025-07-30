@@ -19,6 +19,8 @@ const CouponModal = () => {
   const isLoading = useSelector((state) => state.cart.isLoading);
   const couponModalOpen = useSelector((state) => state.cart.couponModalOpen);
   const cartItems = useSelector((state) => state.cart.cartItems);
+  const pendingOrderData = useSelector((state) => state.cart.pendingOrderData);
+  const paymentMethod = useSelector((state) => state.cart.paymentMethod);
 
   // Calculate subtotal and shipping from Redux state
   const subtotal = cartItems.reduce(
@@ -150,6 +152,7 @@ const CouponModal = () => {
       finalTotal,
       originalTotal: subtotal + shippingCost,
       discountAmount: couponApplied ? subtotal - discountedPrice : 0,
+      paymentMethod: paymentMethod || pendingOrderData?.paymentMethod, // Include payment method
     };
 
     // Store coupon data in Redux and close modal
@@ -170,6 +173,7 @@ const CouponModal = () => {
       finalTotal: subtotal + shippingCost,
       originalTotal: subtotal + shippingCost,
       discountAmount: 0,
+      paymentMethod: paymentMethod || pendingOrderData?.paymentMethod, // Include payment method
     };
 
     // Store coupon data in Redux and close modal
@@ -288,7 +292,7 @@ const CouponModal = () => {
           <div className="flex justify-center">
             <button
               onClick={handleSkip}
-              className="w-full py-3 rounded-lg bg-pink-500 text-white font-semibold hover:bg-pink-400 transition-all duration-300"
+              className="w-full py-3 rounded-lg bg-pink-500 text-black font-semibold hover:bg-pink-400 transition-all duration-300"
             >
               Skip Coupon & Proceed to Payment
             </button>

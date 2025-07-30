@@ -92,7 +92,10 @@ const Cart = () => {
     async (couponData) => {
       try {
         // Handle Stripe payment separately
-        if (pendingOrderData?.paymentMethod === "stripe") {
+        if (
+          couponData.paymentMethod === "stripe" ||
+          pendingOrderData?.paymentMethod === "stripe"
+        ) {
           await processStripePayment(
             couponData,
             deliveryAddress,
