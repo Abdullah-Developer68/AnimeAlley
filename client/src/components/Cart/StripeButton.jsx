@@ -1,14 +1,11 @@
-import api from "../../api/api";
-import { getOrCreateCartId } from "../../utils/cartId";
-import { loadStripe } from "@stripe/stripe-js";
 import { useSelector, useDispatch } from "react-redux";
 import { openCouponModal } from "../../redux/Slice/cartSlice";
 import { toast } from "react-toastify";
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
-const StripeButton = ({ deliveryAddress }) => {
+const StripeButton = () => {
   const dispatch = useDispatch();
   const cartItems = useSelector((state) => state.cart.cartItems);
+  const deliveryAddress = useSelector((state) => state.cart.deliveryAddress);
 
   // Calculate original price (subtotal + shipping)
   const shippingCost = 5;

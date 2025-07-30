@@ -1,16 +1,31 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { applyCoupon, resetCoupon, setCartLoading } from "../../redux/Slice/cartSlice";
+import {
+  applyCoupon,
+  resetCoupon,
+  setCartLoading,
+  closeCouponModal,
+  setCouponProceedData,
+} from "../../redux/Slice/cartSlice";
 import api from "../../api/api";
 import { toast } from "react-toastify";
 import assets from "../../assets/asset";
 import Loader from "../Global/Loader";
 
-const CouponModal = ({ isOpen, onClose, onProceed, subtotal, shippingCost }) => {
+const CouponModal = () => {
   const dispatch = useDispatch();
   const couponApplied = useSelector((state) => state.cart.couponApplied);
   const couponCode = useSelector((state) => state.cart.couponCode);
   const isLoading = useSelector((state) => state.cart.isLoading);
+  const couponModalOpen = useSelector((state) => state.cart.couponModalOpen);
+  const cartItems = useSelector((state) => state.cart.cartItems);
+
+  // Calculate subtotal and shipping from Redux state
+  const subtotal = cartItems.reduce(
+    (total, item) => total + item.price * item.itemQuantity,
+    0
+  );
+  const shippingCost = 5; // SHIPPING_COST constant
 
   const [couponInput, setCouponInput] = useState("");
   const [couponDiscount, setCouponDiscount] = useState(0);
@@ -20,7 +35,9 @@ const CouponModal = ({ isOpen, onClose, onProceed, subtotal, shippingCost }) => 
   // Calculate totals when coupon is applied/removed
   useEffect(() => {
     if (couponApplied && couponDiscount > 0) {
-      const newDiscountedPrice = Math.round(subtotal * (1 - couponDiscount / 100));
+      const newDiscountedPrice = Math.round(
+        subtotal * (1 - couponDiscount / 100)
+      );
       const newFinalTotal = Math.round(newDiscountedPrice + shippingCost);
       setDiscountedPrice(newDiscountedPrice);
       setFinalTotal(newFinalTotal);
@@ -32,7 +49,7 @@ const CouponModal = ({ isOpen, onClose, onProceed, subtotal, shippingCost }) => 
 
   // Reset modal state when opened
   useEffect(() => {
-    if (isOpen) {
+    if (couponModalOpen) {
       setCouponInput("");
       if (!couponApplied) {
         setCouponDiscount(0);
@@ -40,7 +57,7 @@ const CouponModal = ({ isOpen, onClose, onProceed, subtotal, shippingCost }) => 
         setFinalTotal(subtotal + shippingCost);
       }
     }
-  }, [isOpen, couponApplied, subtotal, shippingCost]);
+  }, [couponModalOpen, couponApplied, subtotal, shippingCost]);
 
   const handleApplyCoupon = async () => {
     if (couponApplied) {
@@ -97,7 +114,9 @@ const CouponModal = ({ isOpen, onClose, onProceed, subtotal, shippingCost }) => 
 
         setDiscountedPrice(newDiscountedPrice);
         setFinalTotal(newFinalTotal);
-        toast.success(`Coupon applied! You saved $${subtotal - newDiscountedPrice}`);
+        toast.success(
+          `Coupon applied! You saved $${subtotal - newDiscountedPrice}`
+        );
       } else {
         toast.error("Invalid coupon code");
       }
@@ -117,14 +136,18 @@ const CouponModal = ({ isOpen, onClose, onProceed, subtotal, shippingCost }) => 
   };
 
   const handleProceed = () => {
-    onProceed({
+    const couponData = {
       couponApplied,
       couponCode,
       discountedPrice,
       finalTotal,
       originalTotal: subtotal + shippingCost,
-      discountAmount: couponApplied ? (subtotal - discountedPrice) : 0,
-    });
+      discountAmount: couponApplied ? subtotal - discountedPrice : 0,
+    };
+
+    // Store coupon data in Redux and close modal
+    dispatch(setCouponProceedData(couponData));
+    dispatch(closeCouponModal());
   };
 
   const handleSkip = () => {
@@ -132,26 +155,37 @@ const CouponModal = ({ isOpen, onClose, onProceed, subtotal, shippingCost }) => 
     if (couponApplied) {
       dispatch(resetCoupon());
     }
-    onProceed({
+
+    const couponData = {
       couponApplied: false,
       couponCode: "",
       discountedPrice: subtotal,
       finalTotal: subtotal + shippingCost,
       originalTotal: subtotal + shippingCost,
       discountAmount: 0,
-    });
+    };
+
+    // Store coupon data in Redux and close modal
+    dispatch(setCouponProceedData(couponData));
+    dispatch(closeCouponModal());
   };
 
-  if (!isOpen) return null;
+  const handleClose = () => {
+    dispatch(closeCouponModal());
+  };
+
+  if (!couponModalOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-black/95 border border-white/10 rounded-lg p-6 w-full max-w-md mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-white">Apply Coupon Code</h2>
+          <h2 className="text-xl font-semibold text-white">
+            Apply Coupon Code
+          </h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-white/70 hover:text-white transition-colors"
           >
             <img src={assets.close} alt="close" className="w-6 h-6" />

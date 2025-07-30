@@ -6,7 +6,9 @@ import {
   setFinalCost,
   setCartLoading,
   openCouponModal,
-  closeCouponModal,
+  setDeliveryAddress,
+  setPaymentMethod,
+  setCouponProceedData,
 } from "../redux/Slice/cartSlice";
 import {
   decrementReservationStockAsync,
@@ -14,7 +16,7 @@ import {
 } from "../redux/Thunk/cartThunks";
 import { getOrCreateCartId } from "../utils/cartId";
 import StripeButton from "../components/Cart/StripeButton";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import api from "../api/api";
 import { toast } from "react-toastify";
 import Loader from "../components/Global/Loader";
@@ -26,19 +28,18 @@ const Cart = () => {
   const dispatch = useDispatch();
   const cartItems = useSelector((state) => state.cart.cartItems);
   const isLoading = useSelector((state) => state.cart.isLoading);
-  const couponModalOpen = useSelector((state) => state.cart.couponModalOpen);
+
   const pendingOrderData = useSelector((state) => state.cart.pendingOrderData);
+  const deliveryAddress = useSelector((state) => state.cart.deliveryAddress);
+  const paymentMethod = useSelector((state) => state.cart.paymentMethod);
+  const couponProceedData = useSelector(
+    (state) => state.cart.couponProceedData
+  );
 
   // Constants
   const SHIPPING_COST = 5;
 
   // State management
-  const [deliveryAddress, setDeliveryAddress] = useState(
-    localStorage.getItem("deliveryAddress")
-      ? localStorage.getItem("deliveryAddress")
-      : ""
-  );
-  const [paymentMethod, setPaymentMethod] = useState(""); // Default to Cash on Delivery
   const [loadingItems, setLoadingItems] = useState(new Set()); // Track which items are being updated
 
   // Price calculations
@@ -64,11 +65,6 @@ const Cart = () => {
     dispatch(setFinalCost(totalBeforeDiscount));
   }, [cartItems, subtotal, SHIPPING_COST, dispatch]);
 
-  // Update localStorage when delivery address changes
-  useEffect(() => {
-    localStorage.setItem("deliveryAddress", deliveryAddress);
-  }, [deliveryAddress]);
-
   // Open coupon modal before placing order
   const handlePlaceOrderClick = () => {
     if (!deliveryAddress.trim()) {
@@ -92,68 +88,70 @@ const Cart = () => {
   };
 
   // Order placement after coupon modal
-  const handlePlaceOrder = async (couponData) => {
-    try {
-      // Handle Stripe payment separately
-      if (pendingOrderData?.paymentMethod === "stripe") {
-        await processStripePayment(
-          couponData,
-          deliveryAddress,
+  const handlePlaceOrder = useCallback(
+    async (couponData) => {
+      try {
+        // Handle Stripe payment separately
+        if (pendingOrderData?.paymentMethod === "stripe") {
+          await processStripePayment(
+            couponData,
+            deliveryAddress,
+            subtotal,
+            SHIPPING_COST
+          );
+          return; // Stripe will handle the redirect
+        }
+
+        // Handle Cash on Delivery
+        // Set loading state with a small delay to prevent flickering for fast API calls
+        const loadingTimer = setTimeout(() => {
+          dispatch(setCartLoading(true));
+        }, 200);
+
+        const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+
+        const res = await api.placeOrder(
+          couponData.couponCode,
           subtotal,
-          SHIPPING_COST
+          couponData.discountedPrice,
+          SHIPPING_COST,
+          couponData.finalTotal,
+          userInfo,
+          deliveryAddress,
+          paymentMethod,
+          getOrCreateCartId() // gets or creates a cart ID
         );
-        return; // Stripe will handle the redirect
+
+        // Clear the loading timer since API call completed
+        clearTimeout(loadingTimer);
+        dispatch(setCartLoading(false));
+
+        if (res.data.success) {
+          toast.success("Order placed successfully!");
+          // Reset states
+          dispatch(emptyCart());
+          dispatch(resetCoupon());
+          setPaymentMethod("cod");
+        } else {
+          toast.error(res.data.message || "Failed to place order");
+        }
+      } catch (error) {
+        console.error(error);
+        dispatch(setCartLoading(false));
+        toast.error(error.response?.data?.message || "Something went wrong");
       }
+    },
+    [pendingOrderData, deliveryAddress, subtotal, paymentMethod, dispatch]
+  );
 
-      // Handle Cash on Delivery
-      // Set loading state with a small delay to prevent flickering for fast API calls
-      const loadingTimer = setTimeout(() => {
-        dispatch(setCartLoading(true));
-      }, 200);
-
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-
-      const res = await api.placeOrder(
-        couponData.couponCode,
-        subtotal,
-        couponData.discountedPrice,
-        SHIPPING_COST,
-        couponData.finalTotal,
-        userInfo,
-        deliveryAddress,
-        paymentMethod,
-        getOrCreateCartId() // gets or creates a cart ID
-      );
-
-      // Clear the loading timer since API call completed
-      clearTimeout(loadingTimer);
-      dispatch(setCartLoading(false));
-
-      if (res.data.success) {
-        toast.success("Order placed successfully!");
-        // Reset states
-        dispatch(emptyCart());
-        dispatch(resetCoupon());
-        setPaymentMethod("cod");
-      } else {
-        toast.error(res.data.message || "Failed to place order");
-      }
-    } catch (error) {
-      console.error(error);
-      dispatch(setCartLoading(false));
-      toast.error(error.response?.data?.message || "Something went wrong");
+  // Listen for coupon proceed data and automatically process order
+  useEffect(() => {
+    if (couponProceedData) {
+      handlePlaceOrder(couponProceedData);
+      // Clear the proceed data after processing
+      dispatch(setCouponProceedData(null));
     }
-  };
-
-  // Coupon modal handlers
-  const handleCouponModalClose = () => {
-    dispatch(closeCouponModal());
-  };
-
-  const handleCouponModalProceed = (couponData) => {
-    dispatch(closeCouponModal());
-    handlePlaceOrder(couponData);
-  };
+  }, [couponProceedData, dispatch, handlePlaceOrder]);
 
   // Helper function to render variant badge
   const renderVariantBadge = (item) => {
@@ -384,7 +382,7 @@ const Cart = () => {
                 type="text"
                 placeholder="Delivery Address"
                 value={deliveryAddress}
-                onChange={(e) => setDeliveryAddress(e.target.value)}
+                onChange={(e) => dispatch(setDeliveryAddress(e.target.value))}
                 className="w-full px-3 sm:px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/50 focus:border-pink-500/50 outline-none transition-colors text-sm sm:text-base"
               />
 
@@ -396,7 +394,9 @@ const Cart = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     onClick={() =>
-                      setPaymentMethod((prev) => (prev === "cod" ? "" : "cod"))
+                      dispatch(
+                        setPaymentMethod(paymentMethod === "cod" ? "" : "cod")
+                      )
                     }
                     className={`px-2 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer
                       ${
@@ -407,32 +407,30 @@ const Cart = () => {
                   >
                     Cash on Delivery
                   </button>
-                  <StripeButton deliveryAddress={deliveryAddress} />
+                  <StripeButton />
                 </div>
               </div>
 
               {/* Checkout Button */}
-              {paymentMethod === "cod" && (
-                <button
-                  className="w-full py-3 rounded-lg bg-pink-500 text-black cursor-pointer font-medium hover:shadow-lg hover:shadow-pink-500/25 transition-all duration-300 text-sm sm:text-base mt-4"
-                  onClick={handlePlaceOrderClick}
-                >
-                  Place Order
-                </button>
-              )}
+              {/* Place Order Button - Always visible but disabled until payment method is selected */}
+              <button
+                className={`w-full py-3 rounded-lg font-medium transition-all duration-300 text-sm sm:text-base mt-4 ${
+                  paymentMethod
+                    ? "bg-pink-500 text-black cursor-pointer hover:shadow-lg hover:shadow-pink-500/25"
+                    : "bg-gray-500 text-gray-300 cursor-not-allowed"
+                }`}
+                onClick={handlePlaceOrderClick}
+                disabled={!paymentMethod}
+              >
+                {paymentMethod ? "Place Order" : "Select Payment Method"}
+              </button>
             </div>
           </div>
         </div>
       </div>
 
       {/* Coupon Modal */}
-      <CouponModal
-        isOpen={couponModalOpen}
-        onClose={handleCouponModalClose}
-        onProceed={handleCouponModalProceed}
-        subtotal={subtotal}
-        shippingCost={SHIPPING_COST}
-      />
+      <CouponModal />
     </>
   );
 };

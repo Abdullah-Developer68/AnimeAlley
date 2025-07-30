@@ -32,6 +32,10 @@ const initialState = {
   // Coupon modal state
   couponModalOpen: false,
   pendingOrderData: null, // Store order data while coupon modal is open
+  // Checkout data
+  deliveryAddress: localStorage.getItem("deliveryAddress") || "",
+  paymentMethod: "",
+  couponProceedData: null, // Store coupon data when user proceeds
 };
 
 const cartSlice = createSlice({
@@ -150,6 +154,18 @@ const cartSlice = createSlice({
       state.couponModalOpen = false;
       state.pendingOrderData = null;
     },
+    // Checkout data actions
+    setDeliveryAddress: (state, action) => {
+      state.deliveryAddress = action.payload;
+      localStorage.setItem("deliveryAddress", action.payload);
+    },
+    setPaymentMethod: (state, action) => {
+      state.paymentMethod = action.payload;
+    },
+    // Coupon modal proceed action - stores coupon data for order processing
+    setCouponProceedData: (state, action) => {
+      state.couponProceedData = action.payload;
+    },
   },
 });
 
@@ -166,5 +182,8 @@ export const {
   setCartLoading,
   openCouponModal,
   closeCouponModal,
+  setDeliveryAddress,
+  setPaymentMethod,
+  setCouponProceedData,
 } = cartSlice.actions;
 export default cartSlice.reducer;
