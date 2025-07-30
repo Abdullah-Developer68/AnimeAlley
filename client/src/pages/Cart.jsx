@@ -2,10 +2,11 @@ import { Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import {
   emptyCart,
-  applyCoupon,
   resetCoupon,
   setFinalCost,
   setCartLoading,
+  openCouponModal,
+  closeCouponModal,
 } from "../redux/Slice/cartSlice";
 import {
   decrementReservationStockAsync,
@@ -17,15 +18,16 @@ import { useState, useEffect } from "react";
 import api from "../api/api";
 import { toast } from "react-toastify";
 import Loader from "../components/Global/Loader";
+import CouponModal from "../components/Cart/CouponModal";
+import { processStripePayment } from "../utils/stripePayment";
 
 const Cart = () => {
   // Redux setup
   const dispatch = useDispatch();
   const cartItems = useSelector((state) => state.cart.cartItems);
-  const couponApplied = useSelector((state) => state.cart.couponApplied);
-  const couponCode = useSelector((state) => state.cart.couponCode);
-  const finalCost = useSelector((state) => state.cart.finalCost);
   const isLoading = useSelector((state) => state.cart.isLoading);
+  const couponModalOpen = useSelector((state) => state.cart.couponModalOpen);
+  const pendingOrderData = useSelector((state) => state.cart.pendingOrderData);
 
   // Constants
   const SHIPPING_COST = 5;
@@ -37,9 +39,6 @@ const Cart = () => {
       : ""
   );
   const [paymentMethod, setPaymentMethod] = useState(""); // Default to Cash on Delivery
-  const [couponInput, setCouponInput] = useState(""); // Local state for coupon input
-  const [couponDiscount, setCouponDiscount] = useState(0); // Store coupon discount percentage
-  const [originalPrice, setOriginalPrice] = useState(0); // Store original price before discount
   const [loadingItems, setLoadingItems] = useState(new Set()); // Track which items are being updated
 
   // Price calculations
@@ -54,124 +53,59 @@ const Cart = () => {
 
   const subtotal = calculateSubtotal();
 
-  // Update final cost when cart or coupon changes
+  // Update final cost when cart changes
   useEffect(() => {
     if (cartItems.length === 0) {
       dispatch(resetCoupon());
-      setCouponDiscount(0);
-      setOriginalPrice(0);
       return;
     }
 
     const totalBeforeDiscount = subtotal + SHIPPING_COST;
-    setOriginalPrice(totalBeforeDiscount);
-
-    if (!couponApplied || couponDiscount === 0) {
-      // No coupon: final cost is subtotal + shipping
-      dispatch(resetCoupon());
-      dispatch(setFinalCost(totalBeforeDiscount));
-    } else {
-      // Coupon applied: use stored discount percentage
-      const discountedPrice = Math.round(subtotal * (1 - couponDiscount / 100));
-      const newFinalCost = Math.round(discountedPrice + SHIPPING_COST);
-      dispatch(
-        applyCoupon({
-          couponCode: couponCode,
-          discountedPrice,
-          finalCost: newFinalCost,
-        })
-      );
-    }
-  }, [
-    cartItems,
-    subtotal,
-    SHIPPING_COST,
-    couponApplied,
-    couponDiscount,
-    couponCode,
-    dispatch,
-  ]);
+    dispatch(setFinalCost(totalBeforeDiscount));
+  }, [cartItems, subtotal, SHIPPING_COST, dispatch]);
 
   // Update localStorage when delivery address changes
   useEffect(() => {
     localStorage.setItem("deliveryAddress", deliveryAddress);
   }, [deliveryAddress]);
 
-  // Coupon handling
-  const handleCouponCode = async () => {
-    if (couponApplied) {
-      toast.error("Coupon has been used!");
-      return;
-    }
-
-    if (!couponInput) {
-      toast.error("If you have a coupon code, please enter it.");
-      return;
-    }
-
-    try {
-      // Set loading state with a small delay to prevent flickering for fast API calls
-      const loadingTimer = setTimeout(() => {
-        dispatch(setCartLoading(true));
-      }, 200);
-
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      if (!userInfo) {
-        clearTimeout(loadingTimer);
-        dispatch(setCartLoading(false));
-        toast.error("Please login to apply coupon");
-        return;
-      }
-
-      const response = await api.verifyCouponCode(
-        couponInput.trim(),
-        userInfo.email
-      );
-
-      // Clear the loading timer since API call completed
-      clearTimeout(loadingTimer);
-      dispatch(setCartLoading(false));
-
-      if (response.success === false) {
-        toast.error("Invalid coupon code");
-        return;
-      }
-
-      const coupon = response.data?.coupondata.coupon;
-
-      if (coupon) {
-        const discount = coupon.discountPercentage;
-        setCouponDiscount(discount); // Store discount percentage in state
-        const discountedPrice = Math.round(subtotal * (1 - discount / 100));
-        const newFinalCost = Math.round(discountedPrice + SHIPPING_COST);
-
-        dispatch(
-          applyCoupon({
-            couponCode: couponInput.trim(),
-            discountedPrice,
-            finalCost: newFinalCost,
-          })
-        );
-
-        setTimeout(() => {
-          toast.success(`Coupon applied! New total: ${newFinalCost} $`);
-        }, 500);
-      } else {
-        toast.error("Invalid coupon code");
-      }
-    } catch (error) {
-      dispatch(setCartLoading(false));
-      toast.error(error.response?.data?.message || "Error applying coupon");
-    }
-  };
-
-  // Order placement
-  const handlePlaceOrder = async () => {
+  // Open coupon modal before placing order
+  const handlePlaceOrderClick = () => {
     if (!deliveryAddress.trim()) {
       toast.error("Please enter a delivery address");
       return;
     }
+    if (!paymentMethod) {
+      toast.error("Please select a payment method");
+      return;
+    }
+
+    // Store order data and open coupon modal
+    dispatch(
+      openCouponModal({
+        deliveryAddress,
+        paymentMethod,
+        subtotal,
+        shippingCost: SHIPPING_COST,
+      })
+    );
+  };
+
+  // Order placement after coupon modal
+  const handlePlaceOrder = async (couponData) => {
     try {
+      // Handle Stripe payment separately
+      if (pendingOrderData?.paymentMethod === "stripe") {
+        await processStripePayment(
+          couponData,
+          deliveryAddress,
+          subtotal,
+          SHIPPING_COST
+        );
+        return; // Stripe will handle the redirect
+      }
+
+      // Handle Cash on Delivery
       // Set loading state with a small delay to prevent flickering for fast API calls
       const loadingTimer = setTimeout(() => {
         dispatch(setCartLoading(true));
@@ -179,17 +113,12 @@ const Cart = () => {
 
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
 
-      // Calculate discounted price - if coupon applied, use the discounted subtotal, otherwise use original subtotal
-      const discountedPrice = couponApplied
-        ? subtotal * (1 - couponDiscount / 100)
-        : subtotal;
-
       const res = await api.placeOrder(
-        couponCode,
+        couponData.couponCode,
         subtotal,
-        discountedPrice,
+        couponData.discountedPrice,
         SHIPPING_COST,
-        finalCost,
+        couponData.finalTotal,
         userInfo,
         deliveryAddress,
         paymentMethod,
@@ -214,6 +143,16 @@ const Cart = () => {
       dispatch(setCartLoading(false));
       toast.error(error.response?.data?.message || "Something went wrong");
     }
+  };
+
+  // Coupon modal handlers
+  const handleCouponModalClose = () => {
+    dispatch(closeCouponModal());
+  };
+
+  const handleCouponModalProceed = (couponData) => {
+    dispatch(closeCouponModal());
+    handlePlaceOrder(couponData);
   };
 
   // Helper function to render variant badge
@@ -414,7 +353,7 @@ const Cart = () => {
           </div>
 
           {/* Right Section - Order Summary */}
-          <div className="w-full lg:w-1/4 bg-white/5 backdrop-blur-sm p-4 sm:p-6 lg:max-h-[85vh] lg:overflow-y-auto">
+          <div className="w-full lg:w-1/4 bg-white/5 backdrop-blur-sm p-4 sm:p-6 lg:max-h-[85vh] lg:overflow-y-auto h-[440px]">
             <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 text-white/90">
               Order Summary
             </h2>
@@ -430,15 +369,9 @@ const Cart = () => {
               </div>
               <div className="border-t border-white/10 pt-4">
                 <div className="flex flex-col items-end">
-                  {couponApplied && (
-                    <div className="flex justify-between w-full text-white/50 text-sm">
-                      <span>Original Total</span>
-                      <span className="line-through">{originalPrice} $</span>
-                    </div>
-                  )}
                   <div className="flex justify-between w-full text-yellow-500 font-bold">
                     <span>Total</span>
-                    <span>{finalCost} $</span>
+                    <span>{subtotal + SHIPPING_COST} $</span>
                   </div>
                 </div>
               </div>
@@ -446,21 +379,6 @@ const Cart = () => {
 
             {/* Checkout Section */}
             <div className="space-y-3 sm:space-y-4">
-              {/* Coupon Section */}
-              <input
-                type="text"
-                placeholder="Coupon Code"
-                value={couponInput}
-                onChange={(e) => setCouponInput(e.target.value)}
-                className="w-full px-3 sm:px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder:text-white/50 focus:border-pink-500/50 outline-none transition-colors text-sm sm:text-base"
-              />
-              <button
-                className="w-full py-2 sm:py-3 rounded-lg bg-pink-500 cursor-pointer font-medium hover:shadow-lg hover:shadow-pink-500/25 transition-all duration-300 text-sm sm:text-base"
-                onClick={handleCouponCode}
-              >
-                Apply
-              </button>
-
               {/* Delivery Address Section */}
               <input
                 type="text"
@@ -489,7 +407,7 @@ const Cart = () => {
                   >
                     Cash on Delivery
                   </button>
-                  <StripeButton />
+                  <StripeButton deliveryAddress={deliveryAddress} />
                 </div>
               </div>
 
@@ -497,7 +415,7 @@ const Cart = () => {
               {paymentMethod === "cod" && (
                 <button
                   className="w-full py-3 rounded-lg bg-pink-500 text-black cursor-pointer font-medium hover:shadow-lg hover:shadow-pink-500/25 transition-all duration-300 text-sm sm:text-base mt-4"
-                  onClick={handlePlaceOrder}
+                  onClick={handlePlaceOrderClick}
                 >
                   Place Order
                 </button>
@@ -506,6 +424,15 @@ const Cart = () => {
           </div>
         </div>
       </div>
+
+      {/* Coupon Modal */}
+      <CouponModal
+        isOpen={couponModalOpen}
+        onClose={handleCouponModalClose}
+        onProceed={handleCouponModalProceed}
+        subtotal={subtotal}
+        shippingCost={SHIPPING_COST}
+      />
     </>
   );
 };

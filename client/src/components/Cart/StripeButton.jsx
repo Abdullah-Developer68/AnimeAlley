@@ -1,14 +1,13 @@
 import api from "../../api/api";
 import { getOrCreateCartId } from "../../utils/cartId";
 import { loadStripe } from "@stripe/stripe-js";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { openCouponModal } from "../../redux/Slice/cartSlice";
 import { toast } from "react-toastify";
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
-const StripeButton = () => {
-  // Get required data from Redux store
-  const couponCode = useSelector((state) => state.cart.couponCode);
-  const finalCost = useSelector((state) => state.cart.finalCost);
+const StripeButton = ({ deliveryAddress }) => {
+  const dispatch = useDispatch();
   const cartItems = useSelector((state) => state.cart.cartItems);
 
   // Calculate original price (subtotal + shipping)
@@ -17,35 +16,22 @@ const StripeButton = () => {
     (total, item) => total + item.price * item.itemQuantity,
     0
   );
-  const originalTotal = subtotal + shippingCost;
-  const discountAmount = originalTotal - finalCost;
 
-  // Get delivery address from localStorage (user email extracted from JWT on server)
-  const deliveryAddress = localStorage.getItem("deliveryAddress") || "";
-  console.log("Delivery address being sent to backend:", deliveryAddress);
-  const handleClick = async () => {
-    if (!deliveryAddress.trim()) {
+  const handleClick = () => {
+    if (!deliveryAddress?.trim()) {
       toast.error("Enter the delivery address!");
       return;
     }
-    const stripe = await stripePromise;
-    try {
-      const res = await api.createCheckOutSession(
-        getOrCreateCartId(),
-        couponCode,
-        // Removed userInfo?.email - server will extract from JWT token
-        originalTotal,
-        finalCost,
-        discountAmount,
-        deliveryAddress,
-        shippingCost
-      );
-      const { sessionId } = res.data;
 
-      await stripe.redirectToCheckout({ sessionId });
-    } catch (error) {
-      console.error("Error loading Stripe:", error);
-    }
+    // Open coupon modal with Stripe payment method
+    dispatch(
+      openCouponModal({
+        deliveryAddress,
+        paymentMethod: "stripe",
+        subtotal,
+        shippingCost,
+      })
+    );
   };
 
   return (

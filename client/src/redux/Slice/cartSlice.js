@@ -29,6 +29,9 @@ const initialState = {
     ? Number(localStorage.getItem("finalCost"))
     : 0,
   isLoading: false, // Loading state for cart operations
+  // Coupon modal state
+  couponModalOpen: false,
+  pendingOrderData: null, // Store order data while coupon modal is open
 };
 
 const cartSlice = createSlice({
@@ -138,6 +141,15 @@ const cartSlice = createSlice({
     setCartLoading: (state, action) => {
       state.isLoading = action.payload;
     },
+    // Coupon modal actions
+    openCouponModal: (state, action) => {
+      state.couponModalOpen = true;
+      state.pendingOrderData = action.payload || null;
+    },
+    closeCouponModal: (state) => {
+      state.couponModalOpen = false;
+      state.pendingOrderData = null;
+    },
   },
 });
 
@@ -152,5 +164,7 @@ export const {
   setFinalCost,
   checkAndExpireCart,
   setCartLoading,
+  openCouponModal,
+  closeCouponModal,
 } = cartSlice.actions;
 export default cartSlice.reducer;
