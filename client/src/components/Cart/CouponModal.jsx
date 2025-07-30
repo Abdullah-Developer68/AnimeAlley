@@ -31,6 +31,7 @@ const CouponModal = () => {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [discountedPrice, setDiscountedPrice] = useState(0);
   const [finalTotal, setFinalTotal] = useState(subtotal + shippingCost);
+  const [isProceeding, setIsProceeding] = useState(false);
 
   // Calculate totals when coupon is applied/removed
   useEffect(() => {
@@ -117,6 +118,12 @@ const CouponModal = () => {
         toast.success(
           `Coupon applied! You saved $${subtotal - newDiscountedPrice}`
         );
+
+        // Set proceeding state and automatically proceed with payment
+        setIsProceeding(true);
+        setTimeout(() => {
+          handleProceed();
+        }, 1500); // Give user time to see the success message
       } else {
         toast.error("Invalid coupon code");
       }
@@ -227,13 +234,21 @@ const CouponModal = () => {
               <div>
                 <p className="text-green-400 font-medium">Coupon Applied!</p>
                 <p className="text-white/70 text-sm">Code: {couponCode}</p>
+                {isProceeding && (
+                  <p className="text-yellow-400 text-xs mt-1 flex items-center gap-1">
+                    <span className="animate-pulse">●</span>
+                    Proceeding to payment automatically...
+                  </p>
+                )}
               </div>
-              <button
-                onClick={handleRemoveCoupon}
-                className="text-red-400 hover:text-red-300 text-sm underline"
-              >
-                Remove
-              </button>
+              {!isProceeding && (
+                <button
+                  onClick={handleRemoveCoupon}
+                  className="text-red-400 hover:text-red-300 text-sm underline"
+                >
+                  Remove
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -269,20 +284,16 @@ const CouponModal = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3">
-          <button
-            onClick={handleSkip}
-            className="flex-1 py-3 rounded-lg border border-white/20 text-white/70 hover:text-white hover:border-white/40 transition-all duration-300"
-          >
-            Skip
-          </button>
-          <button
-            onClick={handleProceed}
-            className="flex-1 py-3 rounded-lg bg-pink-500 text-white font-semibold hover:bg-pink-400 transition-all duration-300"
-          >
-            Proceed to Payment
-          </button>
-        </div>
+        {!couponApplied && (
+          <div className="flex justify-center">
+            <button
+              onClick={handleSkip}
+              className="w-full py-3 rounded-lg bg-pink-500 text-white font-semibold hover:bg-pink-400 transition-all duration-300"
+            >
+              Skip Coupon & Proceed to Payment
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
