@@ -37,6 +37,7 @@ const ProductCatalog = () => {
   const [availProductTypes, setAvailProductTypes] = useState(["All"]);
   const [currPage, setCurrPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
   const [loading, setLoading] = useState(true);
   const [apiPayload, setApiPayload] = useState({
     category: "comics",
@@ -126,6 +127,7 @@ const ProductCatalog = () => {
         // Update products and total pages from the response
         setProducts(response.data.currPageProducts);
         setTotalPages(response.data.totalPages);
+        setTotalProducts(response.data.totalProducts);
       }
     } catch (error) {
       console.error("Error details:", {
@@ -517,7 +519,7 @@ const ProductCatalog = () => {
           {products.length > 0
             ? `Showing ${(currPage - 1) * 20 + 1} to ${
                 (currPage - 1) * 20 + products.length
-              } of ${totalPages * 20} products`
+              } of ${totalProducts} products`
             : "No products found"}
         </p>
         <div className="flex gap-2">

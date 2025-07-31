@@ -58,9 +58,6 @@ const generateProductID = async (category) => {
       return await generateProductID(category);
     }
 
-    console.log(
-      `Generated product ID: ${generatedID} for category: ${category}`
-    );
     return generatedID;
   } catch (error) {
     console.error("Error generating product ID:", error);
@@ -77,15 +74,6 @@ const getProducts = async (req, res) => {
 
     const { category, productTypes, price, sortBy, page, searchQuery } =
       constraints;
-
-    console.log("Product filtering request:", {
-      category,
-      productTypes,
-      price,
-      sortBy,
-      page,
-      searchQuery,
-    });
 
     if (!category || !page) {
       return res.status(400).json({
@@ -121,30 +109,18 @@ const getProducts = async (req, res) => {
           (type) => new RegExp(`^${type}$`, "i")
         );
         query.genres = { $in: genreRegexArray };
-        console.log("Comics filter applied:", {
-          productTypes,
-          genreRegexArray,
-        });
       } else if (category === "clothes" || category === "shoes") {
         // Use case-insensitive regex matching for merchType
         const merchTypeRegexArray = productTypes.map(
           (type) => new RegExp(`^${type}$`, "i")
         );
         query.merchType = { $in: merchTypeRegexArray };
-        console.log("Clothes/Shoes filter applied:", {
-          productTypes,
-          merchTypeRegexArray,
-        });
       } else if (category === "toys") {
         // Use case-insensitive regex matching for toyType
         const toyTypeRegexArray = productTypes.map(
           (type) => new RegExp(`^${type}$`, "i")
         );
         query.toyType = { $in: toyTypeRegexArray };
-        console.log("Toys filter applied:", {
-          productTypes,
-          toyTypeRegexArray,
-        });
       }
     }
 
@@ -166,11 +142,6 @@ const getProducts = async (req, res) => {
 
     const itemsPerPage = 20;
     const startIndex = (page - 1) * itemsPerPage;
-    console.log("Query:");
-    console.log(query);
-    console.log(sortOptions);
-    console.log(startIndex);
-    console.log(itemsPerPage);
 
     // Get the total count of products matching the query
     const totalProducts = await productModel.countDocuments(query);
@@ -224,8 +195,6 @@ const findProducts = async (req, res) => {
 const createProduct = async (req, res) => {
   dbConnect();
   try {
-    // Debug: log the file object from multer/cloudinary
-    console.log("req.file:", req.file);
     // Cloudinary returns the URL in req.file.path
     const imageUrl = req.file ? req.file.path : null;
 
@@ -236,7 +205,6 @@ const createProduct = async (req, res) => {
       !req.body.stock ||
       !req.body.category
     ) {
-      console.error("Missing required fields:", req.body);
       return res.status(400).json({
         success: false,
         message: "fields in data from client are missing",
@@ -256,9 +224,6 @@ const createProduct = async (req, res) => {
 
     // Generate unique product ID based on category
     const generatedProductID = await generateProductID(req.body.category);
-    console.log(
-      `Auto-generated Product ID: ${generatedProductID} for category: ${req.body.category}`
-    );
 
     const productData = {
       productID: generatedProductID, // Use auto-generated ID
@@ -307,8 +272,6 @@ const createProduct = async (req, res) => {
       }
     }
 
-    console.log("Creating product with data:", productData);
-
     const newProduct = await productModel.create(productData);
 
     res.status(201).json({
@@ -350,7 +313,6 @@ const updateProduct = async (req, res) => {
       !req.body.stock ||
       !req.body.category
     ) {
-      console.error("Missing required fields:", req.body);
       return res.status(400).json({
         success: false,
         message: "fields in data from client are missing",
@@ -405,8 +367,6 @@ const updateProduct = async (req, res) => {
       }
     }
 
-    console.log("Updating product with data:", productData);
-
     const updatedProduct = await productModel.findOneAndUpdate(
       { productID: productData.productID },
       productData,
@@ -419,7 +379,6 @@ const updateProduct = async (req, res) => {
       product: updatedProduct,
     });
   } catch (error) {
-    console.error("Error updating product:", error);
     res.status(500).json({
       success: false,
       message: error.message || "Internal Server Error",
@@ -482,7 +441,6 @@ const verifyStock = async (req, res) => {
           : `Only ${stockAvailable} items available`,
     });
   } catch (error) {
-    console.error("Error verifying stock:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -492,7 +450,7 @@ const verifyStock = async (req, res) => {
 
 const deleteProduct = async (req, res) => {
   dbConnect();
-  console.log("Delete product request received:", req.body);
+
   const { productID } = req.body;
 
   if (!productID) {

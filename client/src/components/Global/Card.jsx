@@ -7,8 +7,7 @@ import { Link } from "react-router-dom";
 const Cards = ({ product }) => {
   const dispatch = useDispatch();
   const sendProductData = () => {
-    console.log("Sending product data to Redux store:", product);
-    dispatch(transferProductData(product));
+    dispatch(transferProductData(product)); // sent so it can be viewed in ProductDes
   };
 
   // Use the image URL directly (Cloudinary or local)

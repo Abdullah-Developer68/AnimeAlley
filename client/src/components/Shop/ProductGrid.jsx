@@ -44,8 +44,6 @@ const ProductGrid = () => {
           searchQuery: searchQuery || "",
         };
 
-        console.log("Sending to API:", apiPayload);
-
         const response = await api.getProducts(apiPayload);
 
         // Clear the loading timer since API call completed
@@ -67,9 +65,6 @@ const ProductGrid = () => {
     };
     fetchProducts();
   }, [currCategory, appliedFilters, currPage, dispatch]);
-
-  console.log("products");
-  console.log(products);
 
   return (
     <div className="w-full">
