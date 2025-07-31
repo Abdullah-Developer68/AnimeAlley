@@ -62,7 +62,7 @@ const FilterBar = () => {
         currProductTypes.push("Sneakers", "Boots");
         break;
       case "toys":
-        currProductTypes.push("Action Figures", "Dolls", "Cars");
+        currProductTypes.push("Action Figures", "Cars");
         break;
       default:
         break;
