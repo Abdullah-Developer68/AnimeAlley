@@ -2,38 +2,78 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../api/api";
 import { getOrCreateCartId } from "../../utils/cartId";
 import {
-  addToCart,
-  increaseQuantity,
-  decreaseQuantity,
+  setCartItems,
+  addToCartLocal,
+  updateCartItemLocal,
+  removeFromCartLocal,
+  emptyCartLocal,
+  setSyncing,
+  setSyncError,
 } from "../Slice/cartSlice";
 
-// --- USED IN ProductDes.jsx ---
+// Load cart from server
+export const loadCartFromServer = createAsyncThunk(
+  "cart/loadFromServer",
+  async (_, { dispatch, rejectWithValue }) => {
+    try {
+      dispatch(setSyncing(true));
 
-// Add to cart with stock reservation
+      // Get user info to send userId
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      if (!userInfo || !userInfo.id) {
+        return rejectWithValue("User not logged in");
+      }
+
+      const response = await api.getCart(userInfo.id);
+
+      if (response.data.success) {
+        dispatch(setCartItems(response.data.cartItems));
+        dispatch(setSyncError(null));
+        return response.data.cartItems;
+      } else {
+        return rejectWithValue(response.data.message);
+      }
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Failed to load cart";
+      dispatch(setSyncError(errorMessage));
+      return rejectWithValue(errorMessage);
+    } finally {
+      dispatch(setSyncing(false));
+    }
+  }
+);
+
+// Add to cart with server sync
 export const addToCartAsync = createAsyncThunk(
   "cart/addToCartAsync",
   async ({ product, variant, quantity }, { dispatch, rejectWithValue }) => {
-    const cartId = getOrCreateCartId();
     try {
+      dispatch(setSyncing(true));
+
+      // Get user info and cartId
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const cartId = getOrCreateCartId();
+
       const res = await api.reserveStock(
         cartId,
         product._id,
         variant,
-        quantity
+        quantity,
+        userInfo?.id // Send userId from frontend
       );
 
       if (res.data.success) {
         dispatch(
-          addToCart({
+          addToCartLocal({
             ...product,
             selectedVariant: variant,
-            itemQuantity: res.data.reservedQuantity || quantity, // Use actual reserved quantity
+            itemQuantity: res.data.reservedQuantity || quantity,
           })
         );
-        // returns data and tells unwrap that thunk succeded
+        dispatch(setSyncError(null));
         return res.data;
       } else {
-        // Handle different error types with stock info
         if (res.data.stock === -1) {
           return rejectWithValue({
             message: res.data.message,
@@ -48,59 +88,128 @@ export const addToCartAsync = createAsyncThunk(
           });
         } else {
           return rejectWithValue({
-            message: res.data.message || "Failed to reserve stock",
+            message: res.data.message || "Failed to add to cart",
             type: "GENERAL_ERROR",
           });
         }
       }
-    } catch (err) {
-      return rejectWithValue({
-        message: err.response?.data?.message || "Server error",
-        type: "NETWORK_ERROR",
-      });
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Failed to add to cart";
+      dispatch(setSyncError(errorMessage));
+      return rejectWithValue(errorMessage);
+    } finally {
+      dispatch(setSyncing(false));
     }
   }
 );
 
-// --- USED IN Cart.jsx ---
+// Update cart item quantity
+export const updateCartItemAsync = createAsyncThunk(
+  "cart/updateCartItemAsync",
+  async ({ id, variant, newQuantity }, { dispatch, rejectWithValue }) => {
+    try {
+      dispatch(setSyncing(true));
 
-// Increase/Decrease quantity with stock reservation/release
+      const response = await api.updateCartItem(id, variant, newQuantity);
+
+      if (response.data.success) {
+        dispatch(
+          updateCartItemLocal({ id, selectedVariant: variant, newQuantity })
+        );
+        dispatch(setSyncError(null));
+        return response.data;
+      } else {
+        return rejectWithValue(response.data.message);
+      }
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Failed to update cart";
+      dispatch(setSyncError(errorMessage));
+      return rejectWithValue(errorMessage);
+    } finally {
+      dispatch(setSyncing(false));
+    }
+  }
+);
+
+// Remove from cart
+export const removeFromCartAsync = createAsyncThunk(
+  "cart/removeFromCartAsync",
+  async ({ id, variant }, { dispatch, rejectWithValue }) => {
+    try {
+      dispatch(setSyncing(true));
+
+      const response = await api.removeFromCart(id, variant);
+
+      if (response.data.success) {
+        dispatch(removeFromCartLocal({ id, selectedVariant: variant }));
+        dispatch(setSyncError(null));
+        return response.data;
+      } else {
+        return rejectWithValue(response.data.message);
+      }
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Failed to remove from cart";
+      dispatch(setSyncError(errorMessage));
+      return rejectWithValue(errorMessage);
+    } finally {
+      dispatch(setSyncing(false));
+    }
+  }
+);
+
+// Clear cart
+export const clearCartAsync = createAsyncThunk(
+  "cart/clearCartAsync",
+  async (_, { dispatch, rejectWithValue }) => {
+    try {
+      dispatch(setSyncing(true));
+
+      const response = await api.clearCart();
+
+      if (response.data.success) {
+        dispatch(emptyCartLocal());
+        dispatch(setSyncError(null));
+        return response.data;
+      } else {
+        return rejectWithValue(response.data.message);
+      }
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.message || "Failed to clear cart";
+      dispatch(setSyncError(errorMessage));
+      return rejectWithValue(errorMessage);
+    } finally {
+      dispatch(setSyncing(false));
+    }
+  }
+);
+
+// Legacy thunks for backward compatibility
 export const decrementReservationStockAsync = createAsyncThunk(
   "cart/decrementReservationStockAsync",
   async ({ id, variant }, { dispatch, getState, rejectWithValue }) => {
-    const cartId = getOrCreateCartId();
     const item = getState().cart.cartItems.find(
       (i) => i._id === id && i.selectedVariant === variant
     );
     if (!item) return rejectWithValue("Item not found in cart");
-    try {
-      await api.decrementReservationStock(cartId, id, variant, 1);
-      dispatch(decreaseQuantity({ id, selectedVariant: variant }));
-      return true;
-    } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Server error");
-    }
+
+    const newQuantity = Math.max(0, item.itemQuantity - 1);
+    return dispatch(updateCartItemAsync({ id, variant, newQuantity }));
   }
 );
 
 export const incrementReservationStockAsync = createAsyncThunk(
   "cart/incrementReservationStockAsync",
   async ({ id, variant }, { dispatch, getState, rejectWithValue }) => {
-    const cartId = getOrCreateCartId();
     const item = getState().cart.cartItems.find(
       (i) => i._id === id && i.selectedVariant === variant
     );
     if (!item) return rejectWithValue("Item not found in cart");
-    try {
-      const res = await api.reserveStock(cartId, id, variant, 1);
-      if (res.data.success) {
-        dispatch(increaseQuantity({ id, selectedVariant: variant }));
-        return true;
-      } else {
-        return rejectWithValue(res.data.message || "Failed to reserve stock");
-      }
-    } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Server error");
-    }
+
+    const newQuantity = item.itemQuantity + 1;
+    return dispatch(updateCartItemAsync({ id, variant, newQuantity }));
   }
 );

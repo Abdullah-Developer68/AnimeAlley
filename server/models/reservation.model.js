@@ -4,7 +4,13 @@ const { Schema } = mongoose;
 const reservationSchema = new Schema({
   cartId: {
     type: String,
-    required: true,
+    required: false, // Make optional for backward compatibility
+    index: true,
+  },
+  userId: {
+    type: Schema.Types.ObjectId,
+    ref: "User",
+    required: false, // Will be required for new carts
     index: true,
   },
   products: [
@@ -29,7 +35,15 @@ const reservationSchema = new Schema({
     type: Date,
     default: Date.now,
     index: true,
+    expires: 172800, // 2 days in seconds
   },
+});
+
+// Compound index for efficient queries
+reservationSchema.index({
+  userId: 1,
+  "products.productId": 1,
+  "products.variant": 1,
 });
 
 module.exports = mongoose.model("reservations", reservationSchema);

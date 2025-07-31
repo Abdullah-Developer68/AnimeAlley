@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import {
-  emptyCart,
   resetCoupon,
   setFinalCost,
   setCartLoading,
@@ -11,6 +10,8 @@ import {
   setCouponProceedData,
 } from "../redux/Slice/cartSlice";
 import {
+  loadCartFromServer,
+  clearCartAsync,
   decrementReservationStockAsync,
   incrementReservationStockAsync,
 } from "../redux/Thunk/cartThunks";
@@ -28,6 +29,8 @@ const Cart = () => {
   const dispatch = useDispatch();
   const cartItems = useSelector((state) => state.cart.cartItems);
   const isLoading = useSelector((state) => state.cart.isLoading);
+  const isCartLoaded = useSelector((state) => state.cart.isCartLoaded);
+  const isSyncing = useSelector((state) => state.cart.isSyncing);
 
   const pendingOrderData = useSelector((state) => state.cart.pendingOrderData);
   const deliveryAddress = useSelector((state) => state.cart.deliveryAddress);
@@ -41,6 +44,14 @@ const Cart = () => {
 
   // State management
   const [loadingItems, setLoadingItems] = useState(new Set()); // Track which items are being updated
+
+  // Load cart from server on component mount
+  useEffect(() => {
+    const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+    if (userInfo && !isCartLoaded) {
+      dispatch(loadCartFromServer());
+    }
+  }, [dispatch, isCartLoaded]);
 
   // Price calculations
   const calculateSubtotal = () => {
@@ -132,7 +143,7 @@ const Cart = () => {
         if (res.data.success) {
           toast.success("Order placed successfully!");
           // Reset states
-          dispatch(emptyCart());
+          dispatch(clearCartAsync());
           dispatch(resetCoupon());
           setPaymentMethod("cod");
         } else {
@@ -232,6 +243,11 @@ const Cart = () => {
       });
     }
   };
+
+  // Show loading state while cart is being loaded
+  if (!isCartLoaded && isLoading) {
+    return <Loader />;
+  }
 
   // Render Component
   return (

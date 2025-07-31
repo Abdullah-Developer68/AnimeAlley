@@ -10,12 +10,14 @@ const reserveStock = async (req, res) => {
   const mongoSession = await mongoose.startSession();
   mongoSession.startTransaction();
   try {
-    const { cartId, productId, variant, quantity } = req.body;
+    const { cartId, productId, variant, quantity, userId } = req.body;
+
+    // cartId, productId, and quantity are required
     if (!cartId || !productId || !quantity) {
       await mongoSession.abortTransaction();
       return res
         .status(400)
-        .json({ success: false, message: "Missing fields" });
+        .json({ success: false, message: "Missing required fields" });
     }
 
     let requestedQuantity = quantity;
@@ -185,12 +187,31 @@ const reserveStock = async (req, res) => {
       }
     }
 
-    // Upsert reservation
-    let reservation = await reservationModel
-      .findOne({ cartId })
-      .session(mongoSession);
-    if (!reservation) {
-      reservation = new reservationModel({ cartId, products: [] });
+    // Upsert reservation - prioritize userId over cartId for authenticated users
+    let reservation;
+
+    if (userId) {
+      // For authenticated users, use userId to find/create reservation
+      reservation = await reservationModel
+        .findOne({ userId })
+        .session(mongoSession);
+
+      if (!reservation) {
+        reservation = new reservationModel({
+          userId,
+          cartId,
+          products: [],
+        });
+      }
+    } else {
+      // For unauthenticated users, use cartId
+      reservation = await reservationModel
+        .findOne({ cartId })
+        .session(mongoSession);
+
+      if (!reservation) {
+        reservation = new reservationModel({ cartId, products: [] });
+      }
     }
 
     // Find if product already reserved
@@ -355,4 +376,323 @@ const decrementReservationStock = async (req, res) => {
   }
 };
 
-module.exports = { reserveStock, decrementReservationStock };
+// Get user's cart items from server
+const getCart = async (req, res) => {
+  dbConnect();
+  try {
+    const { userId } = req.body; // Get userId from request body
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required to fetch cart",
+      });
+    }
+
+    // Find user's cart reservation
+    const reservation = await reservationModel
+      .findOne({ userId })
+      .populate("products.productId");
+
+    if (!reservation) {
+      return res.json({
+        success: true,
+        cartItems: [],
+        message: "Cart is empty",
+      });
+    }
+
+    // Transform reservation data to cart format
+    const cartItems = await Promise.all(
+      reservation.products.map(async (item) => {
+        const product = item.productId;
+        return {
+          _id: product._id,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          category: product.category,
+          selectedVariant: item.variant,
+          itemQuantity: item.quantity,
+          stock: product.stock,
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      cartItems,
+      cartId: reservation.cartId || reservation._id.toString(),
+    });
+  } catch (error) {
+    console.error("Error fetching cart:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch cart",
+    });
+  }
+};
+
+// Update cart item quantity
+const updateCartItem = async (req, res) => {
+  dbConnect();
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+    const userId = req.user.userid;
+    const { productId, variant, newQuantity } = req.body;
+
+    const reservation = await reservationModel
+      .findOne({ userId })
+      .session(session);
+
+    if (!reservation) {
+      await session.abortTransaction();
+      return res.status(404).json({
+        success: false,
+        message: "Cart not found",
+      });
+    }
+
+    const productIndex = reservation.products.findIndex(
+      (p) => p.productId.toString() === productId && p.variant === variant
+    );
+
+    if (productIndex === -1) {
+      await session.abortTransaction();
+      return res.status(404).json({
+        success: false,
+        message: "Product not found in cart",
+      });
+    }
+
+    const currentQuantity = reservation.products[productIndex].quantity;
+    const quantityDiff = newQuantity - currentQuantity;
+
+    // Handle stock adjustment
+    if (quantityDiff !== 0) {
+      const product = await productModel.findById(productId).session(session);
+
+      if (quantityDiff > 0) {
+        // Increasing quantity - reserve more stock
+        const availableStock =
+          product.category === "toys"
+            ? product.stock
+            : product.stock[variant] || 0;
+
+        if (availableStock < quantityDiff) {
+          await session.abortTransaction();
+          return res.status(400).json({
+            success: false,
+            message: "Insufficient stock available",
+          });
+        }
+
+        // Decrease product stock
+        const stockUpdate =
+          product.category === "toys"
+            ? { stock: -quantityDiff }
+            : { [`stock.${variant}`]: -quantityDiff };
+
+        await productModel.updateOne(
+          { _id: productId },
+          { $inc: stockUpdate },
+          { session }
+        );
+      } else {
+        // Decreasing quantity - release stock
+        const stockUpdate =
+          product.category === "toys"
+            ? { stock: -quantityDiff }
+            : { [`stock.${variant}`]: -quantityDiff };
+
+        await productModel.updateOne(
+          { _id: productId },
+          { $inc: stockUpdate },
+          { session }
+        );
+      }
+    }
+
+    // Update reservation
+    if (newQuantity === 0) {
+      reservation.products.splice(productIndex, 1);
+    } else {
+      reservation.products[productIndex].quantity = newQuantity;
+    }
+
+    reservation.reservedAt = new Date();
+
+    if (reservation.products.length === 0) {
+      await reservationModel
+        .deleteOne({ _id: reservation._id })
+        .session(session);
+    } else {
+      await reservation.save({ session });
+    }
+
+    await session.commitTransaction();
+
+    res.json({
+      success: true,
+      message: "Cart updated successfully",
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("Error updating cart:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update cart",
+    });
+  } finally {
+    session.endSession();
+  }
+};
+
+// Remove item from cart
+const removeFromCart = async (req, res) => {
+  dbConnect();
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+    const userId = req.user.userid;
+    const { productId, variant } = req.body;
+
+    const reservation = await reservationModel
+      .findOne({ userId })
+      .session(session);
+
+    if (!reservation) {
+      await session.abortTransaction();
+      return res.status(404).json({
+        success: false,
+        message: "Cart not found",
+      });
+    }
+
+    const productIndex = reservation.products.findIndex(
+      (p) => p.productId.toString() === productId && p.variant === variant
+    );
+
+    if (productIndex === -1) {
+      await session.abortTransaction();
+      return res.status(404).json({
+        success: false,
+        message: "Product not found in cart",
+      });
+    }
+
+    const quantity = reservation.products[productIndex].quantity;
+
+    // Release stock back to product
+    const product = await productModel.findById(productId).session(session);
+    const stockUpdate =
+      product.category === "toys"
+        ? { stock: quantity }
+        : { [`stock.${variant}`]: quantity };
+
+    await productModel.updateOne(
+      { _id: productId },
+      { $inc: stockUpdate },
+      { session }
+    );
+
+    // Remove from reservation
+    reservation.products.splice(productIndex, 1);
+    reservation.reservedAt = new Date();
+
+    if (reservation.products.length === 0) {
+      await reservationModel
+        .deleteOne({ _id: reservation._id })
+        .session(session);
+    } else {
+      await reservation.save({ session });
+    }
+
+    await session.commitTransaction();
+
+    res.json({
+      success: true,
+      message: "Item removed from cart",
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("Error removing from cart:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to remove item from cart",
+    });
+  } finally {
+    session.endSession();
+  }
+};
+
+// Clear entire cart
+const clearCart = async (req, res) => {
+  dbConnect();
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+    const userId = req.user.userid;
+
+    const reservation = await reservationModel
+      .findOne({ userId })
+      .session(session);
+
+    if (!reservation) {
+      await session.abortTransaction();
+      return res.json({
+        success: true,
+        message: "Cart is already empty",
+      });
+    }
+
+    // Release all stock back to products
+    for (const item of reservation.products) {
+      const product = await productModel
+        .findById(item.productId)
+        .session(session);
+      const stockUpdate =
+        product.category === "toys"
+          ? { stock: item.quantity }
+          : { [`stock.${item.variant}`]: item.quantity };
+
+      await productModel.updateOne(
+        { _id: item.productId },
+        { $inc: stockUpdate },
+        { session }
+      );
+    }
+
+    // Delete reservation
+    await reservationModel.deleteOne({ _id: reservation._id }).session(session);
+
+    await session.commitTransaction();
+
+    res.json({
+      success: true,
+      message: "Cart cleared successfully",
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("Error clearing cart:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to clear cart",
+    });
+  } finally {
+    session.endSession();
+  }
+};
+
+module.exports = {
+  reserveStock,
+  decrementReservationStock,
+  getCart,
+  updateCartItem,
+  removeFromCart,
+  clearCart,
+};

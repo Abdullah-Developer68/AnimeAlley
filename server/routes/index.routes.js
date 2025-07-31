@@ -11,6 +11,7 @@ const userRoutes = require("./modules/user.route.js");
 const exportRoutes = require("./modules/export.route.js");
 const reservationRoutes = require("./modules/reservation.route.js");
 const stripeRoutes = require("./modules/stripe.routes.js");
+const cartRoutes = require("./modules/cart.route.js");
 
 // Mount all routers
 router.use("/auth", authRoutes);
@@ -23,5 +24,6 @@ router.use("/user", userRoutes);
 router.use("/export", exportRoutes);
 router.use("/", reservationRoutes);
 router.use("/stripe", stripeRoutes);
+router.use("/cart", cartRoutes);
 
 module.exports = router;

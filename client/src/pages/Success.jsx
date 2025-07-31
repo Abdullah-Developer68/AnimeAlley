@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { emptyCart } from "../redux/Slice/cartSlice";
+import { emptyCartLocal } from "../redux/Slice/cartSlice";
 import assets from "../assets/asset";
 
 const Success = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  dispatch(emptyCart()); // --> This clears out all info of cart
+  dispatch(emptyCartLocal()); // --> This clears out all info of cart
   useEffect(() => {
     const timer = setTimeout(() => {
       navigate("/history");

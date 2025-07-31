@@ -77,6 +77,13 @@ const ProductDescription = () => {
 
   //  add to cart
   const handleAddToCart = async () => {
+    // Check if user is logged in
+    const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+    if (!userInfo) {
+      toast.error("Please login to add items to cart");
+      return;
+    }
+
     // Validate selections before adding to cart
     if (!selectedVariant && variantOptions.length > 0) {
       toast.error("Please select a variant");

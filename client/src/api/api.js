@@ -240,8 +240,13 @@ api.exportData = (dataType, email, format) => {
 };
 
 // --- API'S FOR STOCK MANAGEMENT
-api.reserveStock = (cartId, productId, variant, quantity) => {
-  return api.post("/reserveStock", { cartId, productId, variant, quantity });
+api.reserveStock = (cartId, productId, variant, quantity, userId) => {
+  const requestBody = { cartId, productId, variant, quantity };
+  // Include userId if provided
+  if (userId) {
+    requestBody.userId = userId;
+  }
+  return api.post("/reserveStock", requestBody);
 };
 
 api.decrementReservationStock = (cartId, productId, variant, quantity) => {
@@ -251,6 +256,23 @@ api.decrementReservationStock = (cartId, productId, variant, quantity) => {
     variant,
     quantity,
   });
+};
+
+// --- CART API'S ---
+api.getCart = (userId) => {
+  return api.post("/cart", { userId });
+};
+
+api.updateCartItem = (productId, variant, newQuantity) => {
+  return api.put("/cart/update", { productId, variant, newQuantity });
+};
+
+api.removeFromCart = (productId, variant) => {
+  return api.delete("/cart/remove", { data: { productId, variant } });
+};
+
+api.clearCart = () => {
+  return api.delete("/cart/clear");
 };
 
 // --- STRIPE API ---

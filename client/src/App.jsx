@@ -15,16 +15,8 @@ import RecruiterByPass from "./pages/RecruiterByPass";
 import { Routes, Route } from "react-router-dom";
 import "react-toastify/dist/ReactToastify.css";
 import "./App.css";
-import { useEffect } from "react";
-import { useDispatch } from "react-redux";
-import { checkAndExpireCart } from "./redux/Slice/cartSlice";
 
 function App() {
-  const dispatch = useDispatch();
-  useEffect(() => {
-    dispatch(checkAndExpireCart());
-  }, [dispatch]);
-
   return (
     <>
       <div className="min-h-screen flex flex-col">
