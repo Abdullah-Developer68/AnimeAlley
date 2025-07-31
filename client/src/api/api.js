@@ -1,4 +1,5 @@
 import axios from "axios";
+import { clearAllUserData } from "../utils/userSessionManager";
 
 // Use development URL in dev mode, production URL in production mode
 const isDevelopment = import.meta.env.MODE === "development";
@@ -34,9 +35,8 @@ api.interceptors.response.use(
   (error) => {
     // If we get a 401 error, the token might be expired or invalid
     if (error.response?.status === 401) {
-      // Clear auth data from localStorage
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("userInfo");
+      // Clear all user data from localStorage
+      clearAllUserData();
 
       // Only redirect to login if we're not already on login/signup pages
       const currentPath = window.location.pathname;
@@ -76,6 +76,11 @@ api.googleAuthSuccess = () => {
 
 api.logout = () => {
   return api.get("/auth/logout");
+};
+
+// recruiter bypass signup
+api.recruiterBypass = (recruiterData) => {
+  return api.post("/auth/recruiterBypass", recruiterData);
 };
 
 // --- PRODUCT API'S ---

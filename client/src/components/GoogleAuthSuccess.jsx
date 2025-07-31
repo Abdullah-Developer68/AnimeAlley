@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import useAuth from "../Hooks/UseAuth";
 import { toast } from "react-toastify";
 import api from "../api/api";
+import { checkAndHandleUserChange } from "../utils/userSessionManager";
 
 const GoogleAuthSuccess = () => {
   const navigate = useNavigate();
@@ -32,7 +33,12 @@ const GoogleAuthSuccess = () => {
           const res = await api.verifyAuth();
 
           if (res.data.success) {
-            localStorage.clear();
+            // Check if user email has changed and clear localStorage if needed
+            const wasCleared = checkAndHandleUserChange(res.data.user);
+            if (!wasCleared) {
+              // Only clear if user didn't change (to avoid double clearing)
+              localStorage.clear();
+            }
 
             // Store token and user info
             localStorage.setItem("authToken", token);
@@ -51,7 +57,13 @@ const GoogleAuthSuccess = () => {
           const res = await api.googleAuthSuccess();
 
           if (res.data.success) {
-            localStorage.clear();
+            // Check if user email has changed and clear localStorage if needed
+            const wasCleared = checkAndHandleUserChange(res.data.user);
+            if (!wasCleared) {
+              // Only clear if user didn't change (to avoid double clearing)
+              localStorage.clear();
+            }
+
             localStorage.setItem("userInfo", JSON.stringify(res.data.user));
             setUser(res.data.user);
             toast.success("Successfully logged in with Google!");

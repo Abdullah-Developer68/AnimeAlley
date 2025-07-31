@@ -11,6 +11,7 @@ import Footer from "./components/Global/Footer";
 import Dashboard from "./pages/Dashboard";
 import Success from "./pages/Success";
 import GoogleAuthSuccess from "./components/GoogleAuthSuccess";
+import RecruiterByPass from "./pages/RecruiterByPass";
 import { Routes, Route } from "react-router-dom";
 import "react-toastify/dist/ReactToastify.css";
 import "./App.css";
@@ -33,6 +34,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/recruiter" element={<RecruiterByPass />} />
             <Route
               path="/auth/google/success"
               element={<GoogleAuthSuccess />}

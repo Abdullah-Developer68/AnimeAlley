@@ -1,6 +1,11 @@
 import { createContext, useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import api from "../api/api";
+import {
+  checkAndHandleUserChange,
+  initializeUserSession,
+  clearAllUserData,
+} from "../utils/userSessionManager";
 
 const AuthContext = createContext();
 
@@ -21,13 +26,19 @@ const AuthProvider = ({ children }) => {
 
   // Helper to set user and localStorage
   const setUserAndStorage = (userData) => {
-    setUser(userData);
     if (userData) {
+      // Check if user email has changed and clear localStorage if needed
+      const wasCleared = checkAndHandleUserChange(userData);
+      if (wasCleared) {
+        console.log("localStorage cleared due to user email change");
+      }
+
+      setUser(userData);
       localStorage.setItem("userInfo", JSON.stringify(userData));
     } else {
-      // Clear all auth-related data on logout
-      localStorage.removeItem("userInfo");
-      localStorage.removeItem("authToken");
+      // Clear all data on logout
+      setUser(null);
+      clearAllUserData();
     }
   };
 
@@ -77,6 +88,9 @@ const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    // Initialize user session to check for email changes
+    initializeUserSession();
+
     // Check auth status if we have user info or auth token in localStorage
     if (userInfo || authToken || loading) {
       checkAuthStatus();
