@@ -17,12 +17,6 @@ const AuthProvider = ({ children }) => {
   const authToken = localStorage.getItem("authToken");
   const [user, setUser] = useState(userInfo ? JSON.parse(userInfo) : null);
   const [loading, setLoading] = useState(true);
-  console.log(
-    "AuthProvider initialized with user:",
-    user,
-    "token exists:",
-    !!authToken
-  );
 
   // Helper to set user and localStorage
   const setUserAndStorage = (userData) => {

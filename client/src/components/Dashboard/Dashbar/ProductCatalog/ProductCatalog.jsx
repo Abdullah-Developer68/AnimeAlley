@@ -94,7 +94,7 @@ const ProductCatalog = () => {
         currProductTypes.push("Sneakers", "Boots");
         break;
       case "toys":
-        currProductTypes.push("Action Figures", "Dolls", "Cars");
+        currProductTypes.push("Action Figures", "Cars");
         break;
       default:
         break;
@@ -294,9 +294,6 @@ const ProductCatalog = () => {
               </option>
               <option className="text-black bg-gray-400" value="toys">
                 Toys
-              </option>
-              <option className="text-black bg-gray-400" value="comics">
-                Comics
               </option>
             </select>
           </div>
