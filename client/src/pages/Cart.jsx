@@ -109,17 +109,11 @@ const Cart = () => {
   // Order placement after coupon modal
   const handlePlaceOrder = useCallback(async () => {
     try {
-      console.log("CouponCode -> Cart.jsx!");
-      console.log(couponCode);
-      console.log("This is the payment method here!");
-      console.log(paymentMethod);
-
       // Handle Stripe payment separately
       if (paymentMethod === "stripe") {
         const paymentData = {
           couponCode,
           deliveryAddress,
-          shippingCost: shippingCost,
           cartId: getOrCreateCartId(),
         };
         await processStripePayment(paymentData);

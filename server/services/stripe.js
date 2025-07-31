@@ -55,8 +55,8 @@ const createCheckoutSession = async (req, res) => {
   }
 
   const { paymentData } = req.body;
-  const { cartId, couponCode, deliveryAddress, shippingCost } = paymentData;
-
+  const { cartId, couponCode, deliveryAddress } = paymentData;
+  const shippingCost = 5;
   try {
     // Find reservation by cartId field, not by _id
     const reservation = await reservationModel

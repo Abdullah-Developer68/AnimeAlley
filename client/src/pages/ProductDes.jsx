@@ -54,15 +54,23 @@ const ProductDescription = () => {
 
   // for quantity changes
   const increaseQuantity = () => {
-    if (selectedVariant && selectedVariant !== "")
+    if (variantOptions.length === 0) {
       setItemQuantity((prev) => prev + 1);
-    else toast.error("Please select a variant before increasing quantity");
+    } else if (selectedVariant && selectedVariant !== "") {
+      setItemQuantity((prev) => prev + 1);
+    } else {
+      toast.error("Please select a variant before increasing quantity");
+    }
   };
 
   const decreaseQuantity = () => {
-    if (selectedVariant && selectedVariant !== "")
+    if (variantOptions.length === 0) {
       setItemQuantity((prev) => prev - 1);
-    else toast.error("Please select a variant before decreasing quantity");
+    } else if (selectedVariant && selectedVariant !== "") {
+      setItemQuantity((prev) => prev - 1);
+    } else {
+      toast.error("Please select a variant before decreasing quantity");
+    }
   };
 
   //  variant selection
