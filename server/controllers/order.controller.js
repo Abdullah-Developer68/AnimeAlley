@@ -16,13 +16,10 @@ const placeOrder = async (req, res) => {
     const {
       cartId,
       couponCode,
-      subtotal,
-      discountedPrice,
-      finalCost,
-      shippingCost,
       userInfo,
       deliveryAddress,
       paymentMethod,
+      userId,
     } = req.body;
 
     if (!cartId) {
@@ -32,7 +29,7 @@ const placeOrder = async (req, res) => {
     }
 
     // Validate essential order information
-    if (!userInfo?.email || !deliveryAddress || !paymentMethod) {
+    if (!userInfo?.email || !deliveryAddress || !paymentMethod || !userId) {
       return res.status(400).json({
         success: false,
         message:
@@ -40,32 +37,7 @@ const placeOrder = async (req, res) => {
       });
     }
 
-    // Validate pricing fields
-    if (
-      subtotal === undefined ||
-      shippingCost === undefined ||
-      finalCost === undefined ||
-      isNaN(Number(subtotal)) ||
-      isNaN(Number(shippingCost)) ||
-      isNaN(Number(finalCost))
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Valid subtotal, shipping cost, and final cost are required",
-      });
-    }
-
-    // Validate pricing values are non-negative
-    if (
-      Number(subtotal) < 0 ||
-      Number(shippingCost) < 0 ||
-      Number(finalCost) < 0
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Pricing values cannot be negative",
-      });
-    }
+    // Pricing validation removed - all calculations done server-side for security
 
     // Verify user exists in database
     const user = await userModel
@@ -82,12 +54,14 @@ const placeOrder = async (req, res) => {
     let couponDoc = null;
     if (couponCode) {
       couponDoc = await couponModel.findOne({ couponCode }).session(session);
+
       if (!couponDoc) {
         return res.status(400).json({
           success: false,
           message: "Coupon not found.",
         });
       }
+
       if (user.couponCodeUsed.includes(couponDoc._id)) {
         return res.status(400).json({
           success: false,
@@ -96,8 +70,17 @@ const placeOrder = async (req, res) => {
       }
     }
 
+    // Define shipping cost (server-controlled)
+    const SHIPPING_COST = 5;
+
     // === RESERVATION PROCESSING ===
-    const reservation = await Reservation.findOne({ cartId }).session(session);
+    // For authenticated users, prioritize userId over cartId
+    let reservation;
+    if (userId) {
+      reservation = await Reservation.findOne({ userId }).session(session);
+    } else {
+      reservation = await Reservation.findOne({ cartId }).session(session);
+    }
 
     if (
       !reservation ||
@@ -137,24 +120,37 @@ const placeOrder = async (req, res) => {
       item.price = product.price;
     }
 
-    // Calculate discount amount from frontend pricing data
-    const concessionGiven =
-      subtotal && discountedPrice ? subtotal - discountedPrice : 0;
+    // Calculate subtotal from actual database prices
+    const subtotal = productsArray.reduce((total, item) => {
+      return total + item.price * item.quantity;
+    }, 0);
+
+    // Calculate discount if coupon is provided
+    let discount = 0;
+    let discountedPrice = subtotal;
+
+    if (couponDoc) {
+      discount = Math.round(subtotal * (couponDoc.discountPercentage / 100));
+      discountedPrice = subtotal - discount;
+    }
+
+    // Calculate final cost
+    const finalCost = discountedPrice + SHIPPING_COST;
 
     // Generate unique orderID
     const orderID = "ORD" + Date.now() + Math.floor(Math.random() * 1000);
 
-    // Create complete order object with all required fields
+    // Create complete order object with server-calculated values (SECURITY)
     const orderData = {
       orderID,
       products: productsArray, // Mapped reservation data with prices
       user: user._id,
       shippingAddress: deliveryAddress,
       paymentMethod,
-      subtotal: Number(subtotal) || 0,
-      shippingCost: Number(shippingCost) || 0,
-      discount: Number(concessionGiven) || 0,
-      finalAmount: Number(finalCost) || 0,
+      subtotal: subtotal, // Server-calculated subtotal
+      shippingCost: SHIPPING_COST, // Server-controlled shipping cost
+      discount: discount, // Server-calculated discount
+      finalAmount: finalCost, // Server-calculated final cost
       couponCode,
     };
 
@@ -163,14 +159,14 @@ const placeOrder = async (req, res) => {
     // === COUPON PROCESSING  ===
 
     // Update coupon statistics and user coupon usage (if coupon was applied)
-    if (couponCode && concessionGiven > 0) {
+    if (couponCode && discount > 0) {
       // Update coupon statistics (totalUsage, lifeTimeDiscount) with session
       await couponModel.findOneAndUpdate(
         { couponCode },
         {
           $inc: {
             totalUsage: 1,
-            lifeTimeDiscount: concessionGiven,
+            lifeTimeDiscount: discount, // Use server-calculated discount
           },
         },
         { session }

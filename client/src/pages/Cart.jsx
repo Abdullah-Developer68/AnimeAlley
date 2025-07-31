@@ -2,12 +2,12 @@ import { Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import {
   resetCoupon,
-  setFinalCost,
   setCartLoading,
   openCouponModal,
   setDeliveryAddress,
   setPaymentMethod,
-  setCouponProceedData,
+  setShouldProceedWithOrder,
+  setFinalTotal,
 } from "../redux/Slice/cartSlice";
 import {
   loadCartFromServer,
@@ -30,27 +30,29 @@ const Cart = () => {
   const cartItems = useSelector((state) => state.cart.cartItems);
   const isLoading = useSelector((state) => state.cart.isLoading);
   const isCartLoaded = useSelector((state) => state.cart.isCartLoaded);
-  const isSyncing = useSelector((state) => state.cart.isSyncing);
-
-  const pendingOrderData = useSelector((state) => state.cart.pendingOrderData);
   const deliveryAddress = useSelector((state) => state.cart.deliveryAddress);
   const paymentMethod = useSelector((state) => state.cart.paymentMethod);
-  const couponProceedData = useSelector(
-    (state) => state.cart.couponProceedData
+  // Individual coupon and payment state selectors
+  const couponApplied = useSelector((state) => state.cart.couponApplied);
+  const couponCode = useSelector((state) => state.cart.couponCode);
+  const discountedPrice = useSelector((state) => state.cart.discountedPrice);
+  const finalTotal = useSelector((state) => state.cart.finalTotal);
+  const originalTotal = useSelector((state) => state.cart.originalTotal);
+  const discountAmount = useSelector((state) => state.cart.discountAmount);
+  const shouldProceedWithOrder = useSelector(
+    (state) => state.cart.shouldProceedWithOrder
   );
 
   // Constants
-  const SHIPPING_COST = 5;
+  const shippingCost = 5;
 
-  // State management
+  // local State
   const [loadingItems, setLoadingItems] = useState(new Set()); // Track which items are being updated
 
   // Load cart from server on component mount
   useEffect(() => {
     const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-    if (userInfo && !isCartLoaded) {
-      dispatch(loadCartFromServer());
-    }
+    if (userInfo && !isCartLoaded) dispatch(loadCartFromServer());
   }, [dispatch, isCartLoaded]);
 
   // Price calculations
@@ -63,18 +65,24 @@ const Cart = () => {
     );
   };
 
+  // Calculate subtotal
   const subtotal = calculateSubtotal();
 
-  // Update final cost when cart changes
-  useEffect(() => {
+  // Update final cost
+  const updateFinalCost = () => {
     if (cartItems.length === 0) {
       dispatch(resetCoupon());
       return;
     }
 
-    const totalBeforeDiscount = subtotal + SHIPPING_COST;
-    dispatch(setFinalCost(totalBeforeDiscount));
-  }, [cartItems, subtotal, SHIPPING_COST, dispatch]);
+    const totalBeforeDiscount = subtotal + shippingCost;
+    dispatch(setFinalTotal(totalBeforeDiscount));
+  };
+
+  // Update final cost when cart changes
+  useEffect(() => {
+    updateFinalCost();
+  }, [cartItems, subtotal, shippingCost, dispatch]);
 
   // Open coupon modal before placing order
   const handlePlaceOrderClick = () => {
@@ -93,79 +101,87 @@ const Cart = () => {
         deliveryAddress,
         paymentMethod,
         subtotal,
-        shippingCost: SHIPPING_COST,
+        shippingCost: shippingCost,
       })
     );
   };
 
   // Order placement after coupon modal
-  const handlePlaceOrder = useCallback(
-    async (couponData) => {
-      try {
-        // Handle Stripe payment separately
-        if (
-          couponData.paymentMethod === "stripe" ||
-          pendingOrderData?.paymentMethod === "stripe"
-        ) {
-          await processStripePayment(
-            couponData,
-            deliveryAddress,
-            subtotal,
-            SHIPPING_COST
-          );
-          return; // Stripe will handle the redirect
-        }
+  const handlePlaceOrder = useCallback(async () => {
+    try {
+      console.log("CouponCode -> Cart.jsx!");
+      console.log(couponCode);
+      console.log("This is the payment method here!");
+      console.log(paymentMethod);
 
-        // Handle Cash on Delivery
-        // Set loading state with a small delay to prevent flickering for fast API calls
-        const loadingTimer = setTimeout(() => {
-          dispatch(setCartLoading(true));
-        }, 200);
-
-        const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-
-        const res = await api.placeOrder(
-          couponData.couponCode,
-          subtotal,
-          couponData.discountedPrice,
-          SHIPPING_COST,
-          couponData.finalTotal,
-          userInfo,
+      // Handle Stripe payment separately
+      if (paymentMethod === "stripe") {
+        const paymentData = {
+          couponCode,
           deliveryAddress,
-          paymentMethod,
-          getOrCreateCartId() // gets or creates a cart ID
-        );
-
-        // Clear the loading timer since API call completed
-        clearTimeout(loadingTimer);
-        dispatch(setCartLoading(false));
-
-        if (res.data.success) {
-          toast.success("Order placed successfully!");
-          // Reset states
-          dispatch(clearCartAsync());
-          dispatch(resetCoupon());
-          setPaymentMethod("cod");
-        } else {
-          toast.error(res.data.message || "Failed to place order");
-        }
-      } catch (error) {
-        console.error(error);
-        dispatch(setCartLoading(false));
-        toast.error(error.response?.data?.message || "Something went wrong");
+          shippingCost: shippingCost,
+          cartId: getOrCreateCartId(),
+        };
+        await processStripePayment(paymentData);
+        return; // Stripe will handle the redirect
       }
-    },
-    [pendingOrderData, deliveryAddress, subtotal, paymentMethod, dispatch]
-  );
 
-  // Listen for coupon proceed data and automatically process order
-  useEffect(() => {
-    if (couponProceedData) {
-      handlePlaceOrder(couponProceedData);
-      // Clear the proceed data after processing
-      dispatch(setCouponProceedData(null));
+      // Handle Cash on Delivery
+      // Set loading state with a small delay to prevent flickering for fast API calls
+      const loadingTimer = setTimeout(() => {
+        dispatch(setCartLoading(true));
+      }, 200);
+
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+
+      const res = await api.placeOrder(
+        couponCode,
+        userInfo,
+        deliveryAddress,
+        paymentMethod,
+        getOrCreateCartId(), // gets or creates a cart ID
+        userInfo?.id // send userId for server to find the correct cart
+      );
+
+      // Clear the loading timer since API call completed
+      clearTimeout(loadingTimer);
+      dispatch(setCartLoading(false));
+
+      if (res.data.success) {
+        toast.success("Order placed successfully!");
+        // Reset states
+        dispatch(clearCartAsync());
+        dispatch(resetCoupon());
+        setPaymentMethod("cod");
+      } else {
+        toast.error(res.data.message || "Failed to place order");
+      }
+    } catch (error) {
+      console.error(error);
+      dispatch(setCartLoading(false));
+      toast.error(error.response?.data?.message || "Something went wrong");
     }
-  }, [couponProceedData, dispatch, handlePlaceOrder]);
+  }, [
+    deliveryAddress,
+    subtotal,
+    paymentMethod,
+    couponApplied,
+    couponCode,
+    discountedPrice,
+    finalTotal,
+    originalTotal,
+    discountAmount,
+    dispatch,
+  ]);
+
+  // Watch for shouldProceedWithOrder flag and trigger order placement
+  useEffect(() => {
+    if (shouldProceedWithOrder) {
+      handlePlaceOrder();
+      // Reset the flag
+      dispatch(setShouldProceedWithOrder(false));
+    }
+  }, [shouldProceedWithOrder, handlePlaceOrder, dispatch]);
 
   // Helper function to render variant badge
   const renderVariantBadge = (item) => {
@@ -382,13 +398,13 @@ const Cart = () => {
               </div>
               <div className="flex justify-between text-white/70">
                 <span>Shipping</span>
-                <span>{SHIPPING_COST} $</span>
+                <span>{shippingCost} $</span>
               </div>
               <div className="border-t border-white/10 pt-4">
                 <div className="flex flex-col items-end">
                   <div className="flex justify-between w-full text-yellow-500 font-bold">
                     <span>Total</span>
-                    <span>{subtotal + SHIPPING_COST} $</span>
+                    <span>{subtotal + shippingCost} $</span>
                   </div>
                 </div>
               </div>
@@ -426,6 +442,7 @@ const Cart = () => {
                   >
                     Cash on Delivery
                   </button>
+
                   <StripeButton />
                 </div>
               </div>

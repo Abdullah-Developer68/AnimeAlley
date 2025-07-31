@@ -117,25 +117,19 @@ api.verifyStock = (itemName, selectedVariant, itemQuantity) => {
 
 api.placeOrder = (
   couponCode,
-  subtotal,
-  discountedPrice,
-  SHIPPING_COST,
-  finalCost,
   userInfo,
   deliveryAddress,
   paymentMethod,
-  cartId
+  cartId,
+  userId
 ) => {
   return api.post("/order/placeOrder", {
     couponCode,
-    subtotal,
-    discountedPrice,
-    shippingCost: SHIPPING_COST,
-    finalCost,
     userInfo,
     deliveryAddress,
     paymentMethod,
     cartId,
+    userId,
   });
 };
 
@@ -276,25 +270,9 @@ api.clearCart = () => {
 };
 
 // --- STRIPE API ---
-api.createCheckOutSession = (
-  cartId,
-  couponCode,
-  // Removed userEmail parameter - server extracts from JWT token
-  originalTotal,
-  finalTotal,
-  discountAmount,
-  deliveryAddress,
-  shippingCost
-) => {
+api.createCheckOutSession = (paymentData) => {
   return api.post("/stripe/create-checkout-session", {
-    cartId,
-    couponCode,
-    // Removed userEmail from request body - server uses authenticated user's email
-    originalTotal,
-    finalTotal,
-    discountAmount,
-    deliveryAddress,
-    shippingCost,
+    paymentData,
   });
 };
 export default api;

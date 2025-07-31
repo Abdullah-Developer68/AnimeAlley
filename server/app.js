@@ -2,12 +2,9 @@ const express = require("express");
 const dbConnect = require("./config/dbConnect.js");
 const dotenv = require("dotenv");
 const passport = require("./config/passport/passport.js");
-const validateEnvironment = require("./utils/validateEnvironment.js");
 
 dotenv.config(); // Load environment variables from .env file
 
-// Validate environment variables on startup
-validateEnvironment();
 const path = require("path"); // Use path module for file paths
 const port = process.env.PORT;
 const app = express();

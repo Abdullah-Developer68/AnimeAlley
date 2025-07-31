@@ -54,16 +54,8 @@ const createCheckoutSession = async (req, res) => {
     });
   }
 
-  const {
-    cartId,
-    couponCode,
-    // Removed userEmail from destructuring - using authenticatedUserEmail instead
-    originalTotal,
-    finalTotal,
-    discountAmount,
-    deliveryAddress,
-    SHIPPING_COST,
-  } = req.body;
+  const { paymentData } = req.body;
+  const { cartId, couponCode, deliveryAddress, shippingCost } = paymentData;
 
   try {
     // Find reservation by cartId field, not by _id
@@ -82,14 +74,35 @@ const createCheckoutSession = async (req, res) => {
     }
 
     // Create line items using the FINAL discounted prices
+
     // Calculate per-item discount ratio
     const calculatedSubtotal = reservation.products.reduce(
-      (sum, item) => sum + item.productId.price * item.quantity,
+      (sum, currItem) => sum + currItem.productId.price * currItem.quantity,
       0
     );
+    let coupon;
+    let discountAmount;
+    if (couponCode.length > 0) {
+      // find the coupon used
+      coupon = await couponModel.findOne({ couponCode });
 
+      if (!coupon) {
+        // do not proceed further because we do not want to procced with the payment if coupon was not applied
+        return res.status(400).json({ error: "Coupon not found" });
+      }
+      // calculate the discount
+      discountAmount = Math.round(
+        calculatedSubtotal * (coupon.discountPercentage / 100)
+      );
+    } else {
+      discountAmount = 0;
+    }
+
+    // calculate final Total
+    const finalTotal = calculatedSubtotal + shippingCost - discountAmount;
+    // calculate the discount ratio
     const discountRatio = finalTotal / calculatedSubtotal;
-
+    // calculate the discounted price for each item
     const lineItems = reservation.products.map((item) => {
       const itemOriginalPrice = item.productId.price;
       const itemDiscountedPrice = itemOriginalPrice * discountRatio;
@@ -130,10 +143,10 @@ const createCheckoutSession = async (req, res) => {
         couponCode: couponCode || "",
         userEmail: authenticatedUserEmail, // Use authenticated email
         discountAmount: discountAmount || "0",
-        originalTotal: originalTotal || calculatedSubtotal.toFixed(2),
-        finalTotal: finalTotal || calculatedSubtotal.toFixed(2),
+        originalTotal: calculatedSubtotal.toFixed(2),
+        finalTotal: finalTotal.toFixed(2),
         shippingAddress: deliveryAddress || "",
-        SHIPPING_COST: SHIPPING_COST || 5,
+        shippingCost: shippingCost || 5,
       },
     };
 
@@ -145,7 +158,7 @@ const createCheckoutSession = async (req, res) => {
 
     res.json({
       sessionId: session.id,
-      subtotal: originalTotal || calculatedSubtotal.toFixed(2),
+      subtotal: calculatedSubtotal.toFixed(2),
       discountAmount: discountAmount || "0",
       finalTotal: finalTotal || calculatedSubtotal.toFixed(2),
       couponApplied: appliedCoupon ? appliedCoupon.couponCode : null,

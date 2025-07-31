@@ -7,8 +7,6 @@ import {
   updateCartItemLocal,
   removeFromCartLocal,
   emptyCartLocal,
-  setSyncing,
-  setSyncError,
 } from "../Slice/cartSlice";
 
 // Load cart from server
@@ -16,10 +14,9 @@ export const loadCartFromServer = createAsyncThunk(
   "cart/loadFromServer",
   async (_, { dispatch, rejectWithValue }) => {
     try {
-      dispatch(setSyncing(true));
-
       // Get user info to send userId
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+
       if (!userInfo || !userInfo.id) {
         return rejectWithValue("User not logged in");
       }
@@ -28,7 +25,6 @@ export const loadCartFromServer = createAsyncThunk(
 
       if (response.data.success) {
         dispatch(setCartItems(response.data.cartItems));
-        dispatch(setSyncError(null));
         return response.data.cartItems;
       } else {
         return rejectWithValue(response.data.message);
@@ -36,10 +32,7 @@ export const loadCartFromServer = createAsyncThunk(
     } catch (error) {
       const errorMessage =
         error.response?.data?.message || "Failed to load cart";
-      dispatch(setSyncError(errorMessage));
       return rejectWithValue(errorMessage);
-    } finally {
-      dispatch(setSyncing(false));
     }
   }
 );
@@ -49,8 +42,6 @@ export const addToCartAsync = createAsyncThunk(
   "cart/addToCartAsync",
   async ({ product, variant, quantity }, { dispatch, rejectWithValue }) => {
     try {
-      dispatch(setSyncing(true));
-
       // Get user info and cartId
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       const cartId = getOrCreateCartId();
@@ -71,7 +62,6 @@ export const addToCartAsync = createAsyncThunk(
             itemQuantity: res.data.reservedQuantity || quantity,
           })
         );
-        dispatch(setSyncError(null));
         return res.data;
       } else {
         if (res.data.stock === -1) {
@@ -96,10 +86,7 @@ export const addToCartAsync = createAsyncThunk(
     } catch (error) {
       const errorMessage =
         error.response?.data?.message || "Failed to add to cart";
-      dispatch(setSyncError(errorMessage));
       return rejectWithValue(errorMessage);
-    } finally {
-      dispatch(setSyncing(false));
     }
   }
 );
@@ -109,15 +96,12 @@ export const updateCartItemAsync = createAsyncThunk(
   "cart/updateCartItemAsync",
   async ({ id, variant, newQuantity }, { dispatch, rejectWithValue }) => {
     try {
-      dispatch(setSyncing(true));
-
       const response = await api.updateCartItem(id, variant, newQuantity);
 
       if (response.data.success) {
         dispatch(
           updateCartItemLocal({ id, selectedVariant: variant, newQuantity })
         );
-        dispatch(setSyncError(null));
         return response.data;
       } else {
         return rejectWithValue(response.data.message);
@@ -125,10 +109,7 @@ export const updateCartItemAsync = createAsyncThunk(
     } catch (error) {
       const errorMessage =
         error.response?.data?.message || "Failed to update cart";
-      dispatch(setSyncError(errorMessage));
       return rejectWithValue(errorMessage);
-    } finally {
-      dispatch(setSyncing(false));
     }
   }
 );
@@ -138,13 +119,10 @@ export const removeFromCartAsync = createAsyncThunk(
   "cart/removeFromCartAsync",
   async ({ id, variant }, { dispatch, rejectWithValue }) => {
     try {
-      dispatch(setSyncing(true));
-
       const response = await api.removeFromCart(id, variant);
 
       if (response.data.success) {
         dispatch(removeFromCartLocal({ id, selectedVariant: variant }));
-        dispatch(setSyncError(null));
         return response.data;
       } else {
         return rejectWithValue(response.data.message);
@@ -152,10 +130,7 @@ export const removeFromCartAsync = createAsyncThunk(
     } catch (error) {
       const errorMessage =
         error.response?.data?.message || "Failed to remove from cart";
-      dispatch(setSyncError(errorMessage));
       return rejectWithValue(errorMessage);
-    } finally {
-      dispatch(setSyncing(false));
     }
   }
 );
@@ -165,13 +140,10 @@ export const clearCartAsync = createAsyncThunk(
   "cart/clearCartAsync",
   async (_, { dispatch, rejectWithValue }) => {
     try {
-      dispatch(setSyncing(true));
-
       const response = await api.clearCart();
 
       if (response.data.success) {
         dispatch(emptyCartLocal());
-        dispatch(setSyncError(null));
         return response.data;
       } else {
         return rejectWithValue(response.data.message);
@@ -179,10 +151,7 @@ export const clearCartAsync = createAsyncThunk(
     } catch (error) {
       const errorMessage =
         error.response?.data?.message || "Failed to clear cart";
-      dispatch(setSyncError(errorMessage));
       return rejectWithValue(errorMessage);
-    } finally {
-      dispatch(setSyncing(false));
     }
   }
 );

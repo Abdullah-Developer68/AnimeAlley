@@ -54,7 +54,7 @@ const processSuccessfulPayment = async (StripeSession) => {
       finalTotal,
       discountAmount,
       shippingAddress,
-      SHIPPING_COST,
+      shippingCost,
       userEmail: metadataUserEmail,
     } = StripeSession.metadata;
 
@@ -115,10 +115,10 @@ const processSuccessfulPayment = async (StripeSession) => {
         price: item.productId.price,
       })),
       user: user._id, // Required field in your Order model
-      shippingAddress, // <-- fix: use shippingAddress
+      shippingAddress,
       paymentMethod: "stripe",
       subtotal: parseFloat(originalTotal),
-      shippingCost: parseFloat(SHIPPING_COST) || 0,
+      shippingCost: parseFloat(shippingCost) || 5,
       discount: parseFloat(discountAmount) || 0,
       finalAmount: parseFloat(finalTotal),
       couponCode: couponCode || null,

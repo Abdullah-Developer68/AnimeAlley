@@ -1,30 +1,21 @@
 import api from "../api/api";
-import { getOrCreateCartId } from "./cartId";
 import { loadStripe } from "@stripe/stripe-js";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 /**
  * Process Stripe payment with coupon data
- * @param {Object} couponData - Coupon information from modal
+ * @param {Object} paymentData - Coupon information from modal
  * @param {string} deliveryAddress - Delivery address
  * @param {number} subtotal - Original subtotal
  * @param {number} shippingCost - Shipping cost
  */
-export const processStripePayment = async (couponData, deliveryAddress, subtotal, shippingCost) => {
+export const processStripePayment = async (paymentData) => {
   try {
     const stripe = await stripePromise;
-    
-    const res = await api.createCheckOutSession(
-      getOrCreateCartId(),
-      couponData.couponCode,
-      couponData.originalTotal,
-      couponData.finalTotal,
-      couponData.discountAmount,
-      deliveryAddress,
-      shippingCost
-    );
-    
+
+    const res = await api.createCheckOutSession(paymentData);
+
     const { sessionId } = res.data;
     await stripe.redirectToCheckout({ sessionId });
   } catch (error) {

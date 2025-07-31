@@ -4,19 +4,19 @@ const initialState = {
   cartItems: [],
   couponApplied: false,
   couponCode: "",
-  finalCost: 0,
   isLoading: false,
   isCartLoaded: false, // Track if cart has been loaded from server
   // Coupon modal state
   couponModalOpen: false,
-  pendingOrderData: null,
   // Checkout data
   deliveryAddress: localStorage.getItem("deliveryAddress") || "",
   paymentMethod: "",
-  couponProceedData: null,
-  // Server sync state
-  isSyncing: false,
-  lastSyncError: null,
+  // Individual payment and coupon states
+  discountedPrice: 0,
+  finalTotal: 0, // finalTotal = ( subtotal + shipping cost ) - discount
+  originalTotal: 0,
+  discountAmount: 0,
+  shouldProceedWithOrder: false, // Flag to trigger order placement
 };
 
 const cartSlice = createSlice({
@@ -72,42 +72,30 @@ const cartSlice = createSlice({
       state.cartItems = [];
     },
 
-    // Sync state management
-    setSyncing: (state, action) => {
-      state.isSyncing = action.payload;
-    },
-
-    setSyncError: (state, action) => {
-      state.lastSyncError = action.payload;
-    },
     // Keep existing coupon actions unchanged
     applyCoupon: (state, action) => {
       const { couponCode, finalCost } = action.payload;
+      console.log("REDUX STORE COUPON DATA:", action.payload);
       state.couponApplied = true;
       state.couponCode = couponCode;
-      state.finalCost = finalCost;
+      state.finalTotal = finalCost; // Use finalTotal instead of finalCost
     },
 
     resetCoupon: (state) => {
       state.couponApplied = false;
       state.couponCode = "";
-      state.finalCost = 0;
+      state.finalTotal = 0; // Use finalTotal instead of finalCost
     },
 
-    setFinalCost: (state, action) => {
-      state.finalCost = action.payload;
-    },
     setCartLoading: (state, action) => {
       state.isLoading = action.payload;
     },
     // Coupon modal actions
-    openCouponModal: (state, action) => {
+    openCouponModal: (state) => {
       state.couponModalOpen = true;
-      state.pendingOrderData = action.payload || null;
     },
     closeCouponModal: (state) => {
       state.couponModalOpen = false;
-      state.pendingOrderData = null;
     },
     // Checkout data actions
     setDeliveryAddress: (state, action) => {
@@ -117,9 +105,26 @@ const cartSlice = createSlice({
     setPaymentMethod: (state, action) => {
       state.paymentMethod = action.payload;
     },
-    // Coupon modal proceed action - stores coupon data for order processing
-    setCouponProceedData: (state, action) => {
-      state.couponProceedData = action.payload;
+
+    // Individual state setters
+    setDiscountedPrice: (state, action) => {
+      state.discountedPrice = action.payload;
+    },
+
+    setFinalTotal: (state, action) => {
+      state.finalTotal = action.payload;
+    },
+
+    setOriginalTotal: (state, action) => {
+      state.originalTotal = action.payload;
+    },
+
+    setDiscountAmount: (state, action) => {
+      state.discountAmount = action.payload;
+    },
+
+    setShouldProceedWithOrder: (state, action) => {
+      state.shouldProceedWithOrder = action.payload;
     },
   },
 });
@@ -130,16 +135,17 @@ export const {
   updateCartItemLocal,
   removeFromCartLocal,
   emptyCartLocal,
-  setSyncing,
-  setSyncError,
   applyCoupon,
   resetCoupon,
-  setFinalCost,
   setCartLoading,
   openCouponModal,
   closeCouponModal,
   setDeliveryAddress,
   setPaymentMethod,
-  setCouponProceedData,
+  setDiscountedPrice,
+  setFinalTotal,
+  setOriginalTotal,
+  setDiscountAmount,
+  setShouldProceedWithOrder,
 } = cartSlice.actions;
 export default cartSlice.reducer;

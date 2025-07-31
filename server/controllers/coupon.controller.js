@@ -24,10 +24,11 @@ const checkCoupon = async (req, res) => {
       });
     }
 
-    // Find user and check if coupon was already used
+    // Find user
     const user = await userModel
       .findOne({ email: userEmail })
       .populate("couponCodeUsed");
+
     if (!user) {
       return res.status(404).json({
         success: false,

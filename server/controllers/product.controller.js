@@ -205,6 +205,7 @@ const createProduct = async (req, res) => {
       !req.body.stock ||
       !req.body.category
     ) {
+      console.error("Missing required fields:", req.body);
       return res.status(400).json({
         success: false,
         message: "fields in data from client are missing",
@@ -313,6 +314,7 @@ const updateProduct = async (req, res) => {
       !req.body.stock ||
       !req.body.category
     ) {
+      console.error("Missing required fields:", req.body);
       return res.status(400).json({
         success: false,
         message: "fields in data from client are missing",
@@ -379,6 +381,7 @@ const updateProduct = async (req, res) => {
       product: updatedProduct,
     });
   } catch (error) {
+    console.error("Error updating product:", error);
     res.status(500).json({
       success: false,
       message: error.message || "Internal Server Error",
@@ -441,6 +444,7 @@ const verifyStock = async (req, res) => {
           : `Only ${stockAvailable} items available`,
     });
   } catch (error) {
+    console.error("Error verifying stock:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -450,7 +454,6 @@ const verifyStock = async (req, res) => {
 
 const deleteProduct = async (req, res) => {
   dbConnect();
-
   const { productID } = req.body;
 
   if (!productID) {

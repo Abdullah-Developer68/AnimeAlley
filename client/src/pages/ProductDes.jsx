@@ -49,35 +49,20 @@ const ProductDescription = () => {
         };
       });
       setStockStatus(initialStockStatus);
-    } else if (selectedProduct.category === "toys") {
-      setVariantOptions([]);
-      setVariantLabel("");
-      setStockStatus({
-        stockAvailable: selectedProduct.stock || 0,
-        isAvailable: (selectedProduct.stock || 0) > 0,
-      });
     }
   }, [selectedProduct]);
 
   // for quantity changes
   const increaseQuantity = () => {
-    if (selectedProduct.category === "toys") {
+    if (selectedVariant && selectedVariant !== "")
       setItemQuantity((prev) => prev + 1);
-    } else if (selectedVariant && selectedVariant !== "") {
-      setItemQuantity((prev) => prev + 1);
-    } else {
-      toast.error("Please select a variant before increasing quantity");
-    }
+    else toast.error("Please select a variant before increasing quantity");
   };
 
   const decreaseQuantity = () => {
-    if (selectedProduct.category === "toys") {
+    if (selectedVariant && selectedVariant !== "")
       setItemQuantity((prev) => prev - 1);
-    } else if (selectedVariant && selectedVariant !== "") {
-      setItemQuantity((prev) => prev - 1);
-    } else {
-      toast.error("Please select a variant before decreasing quantity");
-    }
+    else toast.error("Please select a variant before decreasing quantity");
   };
 
   //  variant selection
@@ -100,11 +85,9 @@ const ProductDescription = () => {
     }
 
     // Validate selections before adding to cart
-    if (selectedProduct.category !== "toys") {
-      if (!selectedVariant && variantOptions.length > 0) {
-        toast.error("Please select a variant");
-        return;
-      }
+    if (!selectedVariant && variantOptions.length > 0) {
+      toast.error("Please select a variant");
+      return;
     }
     if (itemQuantity <= 0) {
       toast.error("Please select a valid quantity");
@@ -228,33 +211,31 @@ const ProductDescription = () => {
               {selectedProduct.description}
             </p>
 
-            {/* Size/Volume Selection - Hide for toys */}
-            {selectedProduct.category !== "toys" && (
-              <div className="space-y-4">
-                <h3 className="text-white/90 font-medium">{variantLabel}</h3>
-                <div className="flex flex-wrap gap-3">
-                  {variantOptions.map((variant) => (
-                    <button
-                      key={variant}
-                      onClick={() => variantSelect(variant)}
-                      className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-300 cursor-pointer
-                        ${
-                          selectedVariant === variant
-                            ? "bg-yellow-500 text-black"
-                            : stockStatus[variant]?.stockAvailable > 0
-                            ? "bg-white/10 text-white/70 hover:bg-white/20"
-                            : "bg-red-500/20 text-red-500/70 cursor-not-allowed"
-                        }`}
-                      disabled={stockStatus[variant]?.stockAvailable === 0}
-                    >
-                      {variant}
-                      {stockStatus[variant]?.stockAvailable === 0 &&
-                        " (Out of Stock)"}
-                    </button>
-                  ))}
-                </div>
+            {/* Size/Volume Selection */}
+            <div className="space-y-4">
+              <h3 className="text-white/90 font-medium">{variantLabel}</h3>
+              <div className="flex flex-wrap gap-3">
+                {variantOptions.map((variant) => (
+                  <button
+                    key={variant}
+                    onClick={() => variantSelect(variant)}
+                    className={`px-6 py-2.5 rounded-lg font-medium transition-all duration-300 cursor-pointer
+                      ${
+                        selectedVariant === variant
+                          ? "bg-yellow-500 text-black"
+                          : stockStatus[variant]?.stockAvailable > 0
+                          ? "bg-white/10 text-white/70 hover:bg-white/20"
+                          : "bg-red-500/20 text-red-500/70 cursor-not-allowed"
+                      }`}
+                    disabled={stockStatus[variant]?.stockAvailable === 0}
+                  >
+                    {variant}
+                    {stockStatus[variant]?.stockAvailable === 0 &&
+                      " (Out of Stock)"}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
 
             {/* Quantity and Price Row */}
             <div className="space-y-4">

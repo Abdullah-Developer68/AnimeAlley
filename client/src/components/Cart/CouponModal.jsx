@@ -5,7 +5,11 @@ import {
   resetCoupon,
   setCartLoading,
   closeCouponModal,
-  setCouponProceedData,
+  setDiscountedPrice,
+  setFinalTotal,
+  setOriginalTotal,
+  setDiscountAmount,
+  setShouldProceedWithOrder,
 } from "../../redux/Slice/cartSlice";
 import api from "../../api/api";
 import { toast } from "react-toastify";
@@ -14,13 +18,14 @@ import Loader from "../Global/Loader";
 
 const CouponModal = () => {
   const dispatch = useDispatch();
+  // Redux state
   const couponApplied = useSelector((state) => state.cart.couponApplied);
-  const couponCode = useSelector((state) => state.cart.couponCode);
+  const couponCode = useSelector((state) => state.cart.couponCode); // used to display in the input tag after the couponCode is dispatched to the redux store
   const isLoading = useSelector((state) => state.cart.isLoading);
   const couponModalOpen = useSelector((state) => state.cart.couponModalOpen);
   const cartItems = useSelector((state) => state.cart.cartItems);
-  const pendingOrderData = useSelector((state) => state.cart.pendingOrderData);
-  const paymentMethod = useSelector((state) => state.cart.paymentMethod);
+  const discountedPrice = useSelector((state) => state.cart.discountedPrice);
+  const finalTotal = useSelector((state) => state.cart.finalTotal);
 
   // Calculate subtotal and shipping from Redux state
   const subtotal = cartItems.reduce(
@@ -29,38 +34,49 @@ const CouponModal = () => {
   );
   const shippingCost = 5; // SHIPPING_COST constant
 
+  // Local state
   const [couponInput, setCouponInput] = useState("");
   const [couponDiscount, setCouponDiscount] = useState(0);
-  const [discountedPrice, setDiscountedPrice] = useState(0);
-  const [finalTotal, setFinalTotal] = useState(subtotal + shippingCost);
   const [isProceeding, setIsProceeding] = useState(false);
 
-  // Calculate totals when coupon is applied/removed
-  useEffect(() => {
+  const calculateCosts = () => {
     if (couponApplied && couponDiscount > 0) {
+      // discounted Price
       const newDiscountedPrice = Math.round(
         subtotal * (1 - couponDiscount / 100)
       );
+      // Final Total
       const newFinalTotal = Math.round(newDiscountedPrice + shippingCost);
-      setDiscountedPrice(newDiscountedPrice);
-      setFinalTotal(newFinalTotal);
+      // update cartSlice
+      dispatch(setDiscountedPrice(newDiscountedPrice));
+      dispatch(setFinalTotal(newFinalTotal));
     } else {
-      setDiscountedPrice(subtotal);
-      setFinalTotal(subtotal + shippingCost);
+      //update cartSlice
+      dispatch(setDiscountedPrice(subtotal));
+      dispatch(setFinalTotal(subtotal + shippingCost));
     }
-  }, [couponApplied, couponDiscount, subtotal, shippingCost]);
+  };
 
-  // Reset modal state when opened
-  useEffect(() => {
+  const resetCouponModalState = () => {
     if (couponModalOpen) {
       setCouponInput("");
       if (!couponApplied) {
         setCouponDiscount(0);
-        setDiscountedPrice(subtotal);
-        setFinalTotal(subtotal + shippingCost);
+        dispatch(setDiscountedPrice(subtotal));
+        dispatch(setFinalTotal(subtotal + shippingCost));
       }
     }
-  }, [couponModalOpen, couponApplied, subtotal, shippingCost]);
+  };
+
+  // Calculate totals when coupon is applied/removed
+  useEffect(() => {
+    calculateCosts();
+  }, [couponApplied, couponDiscount, subtotal, shippingCost, dispatch]);
+
+  // Reset modal state when opened
+  useEffect(() => {
+    resetCouponModalState();
+  }, [couponModalOpen, couponApplied, subtotal, shippingCost, dispatch]);
 
   const handleApplyCoupon = async () => {
     if (couponApplied) {
@@ -74,10 +90,12 @@ const CouponModal = () => {
     }
 
     try {
+      // start loading
       const loadingTimer = setTimeout(() => {
-        dispatch(setCartLoading(true));
+        dispatch(setCartLoading(true)); // shows a loader on screen
       }, 200);
 
+      // find user
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       if (!userInfo) {
         clearTimeout(loadingTimer);
@@ -85,12 +103,13 @@ const CouponModal = () => {
         toast.error("Please login to apply coupon");
         return;
       }
-
+      // verify coupon
       const response = await api.verifyCouponCode(
         couponInput.trim(),
         userInfo.email
       );
 
+      // closes the loader
       clearTimeout(loadingTimer);
       dispatch(setCartLoading(false));
 
@@ -115,8 +134,8 @@ const CouponModal = () => {
           })
         );
 
-        setDiscountedPrice(newDiscountedPrice);
-        setFinalTotal(newFinalTotal);
+        dispatch(setDiscountedPrice(newDiscountedPrice));
+        dispatch(setFinalTotal(newFinalTotal));
         toast.success(
           `Coupon applied! You saved $${subtotal - newDiscountedPrice}`
         );
@@ -138,25 +157,23 @@ const CouponModal = () => {
   const handleRemoveCoupon = () => {
     dispatch(resetCoupon());
     setCouponDiscount(0);
-    setDiscountedPrice(subtotal);
-    setFinalTotal(subtotal + shippingCost);
+    dispatch(setDiscountedPrice(subtotal));
+    dispatch(setFinalTotal(subtotal + shippingCost));
     setCouponInput("");
     toast.success("Coupon removed");
   };
 
   const handleProceed = () => {
-    const couponData = {
-      couponApplied,
-      couponCode,
-      discountedPrice,
-      finalTotal,
-      originalTotal: subtotal + shippingCost,
-      discountAmount: couponApplied ? subtotal - discountedPrice : 0,
-      paymentMethod: paymentMethod || pendingOrderData?.paymentMethod, // Include payment method
-    };
+    // Dispatch individual state updates
+    dispatch(setDiscountedPrice(discountedPrice));
+    dispatch(setFinalTotal(finalTotal));
+    dispatch(setOriginalTotal(subtotal + shippingCost));
+    dispatch(setDiscountAmount(couponApplied ? subtotal - discountedPrice : 0));
 
-    // Store coupon data in Redux and close modal
-    dispatch(setCouponProceedData(couponData));
+    // Trigger order placement
+    dispatch(setShouldProceedWithOrder(true));
+
+    // Close modal
     dispatch(closeCouponModal());
   };
 
@@ -166,18 +183,16 @@ const CouponModal = () => {
       dispatch(resetCoupon());
     }
 
-    const couponData = {
-      couponApplied: false,
-      couponCode: "",
-      discountedPrice: subtotal,
-      finalTotal: subtotal + shippingCost,
-      originalTotal: subtotal + shippingCost,
-      discountAmount: 0,
-      paymentMethod: paymentMethod || pendingOrderData?.paymentMethod, // Include payment method
-    };
+    // Dispatch individual state updates for no coupon scenario
+    dispatch(setDiscountedPrice(subtotal));
+    dispatch(setFinalTotal(subtotal + shippingCost));
+    dispatch(setOriginalTotal(subtotal + shippingCost));
+    dispatch(setDiscountAmount(0));
 
-    // Store coupon data in Redux and close modal
-    dispatch(setCouponProceedData(couponData));
+    // Trigger order placement
+    dispatch(setShouldProceedWithOrder(true));
+
+    // Close modal
     dispatch(closeCouponModal());
   };
 
@@ -217,7 +232,7 @@ const CouponModal = () => {
             <button
               onClick={handleApplyCoupon}
               disabled={isLoading || !couponInput.trim()}
-              className="w-full py-3 rounded-lg bg-yellow-500 text-black font-semibold hover:bg-yellow-400 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-lg cursor-pointer bg-yellow-500 text-black font-semibold hover:bg-yellow-400 disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
