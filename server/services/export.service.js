@@ -104,7 +104,7 @@ const dataConfigs = {
       },
       { header: "Status", key: "status", width: 15 },
       { header: "Date", key: "createdAt", width: 20, isDate: true },
-      { header: "Coupon Used", key: "couponCode", width: 20 },
+      { header: "Coupon", key: "couponCode", width: 30 },
     ],
   },
 };
@@ -220,7 +220,7 @@ const generatePdf = async (res, config) => {
 
   // Draw each column header
   config.fields.forEach((field) => {
-    doc.text(field.header, x, tableTop);
+    doc.text(field.header, x, tableTop, { width: field.width * 5 - 10 });
     x += field.width * 5; // Spacing out each column by width.
   });
 
