@@ -334,7 +334,7 @@ const allOrdersList = async (req, res) => {
         path: "products.productId",
         select: "name price image description",
       })
-      .populate({ path: "user", select: "email username" });
+      .populate({ path: "user", select: "email username profilePic" });
 
     // Respond with paginated orders and pagination info
     res.status(200).json({

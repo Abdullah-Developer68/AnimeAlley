@@ -300,11 +300,22 @@ const Orders = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-pink-500/20 flex items-center justify-center">
-                          <span className="text-sm font-medium text-pink-500">
-                            {order.user?.username?.slice(0, 2)?.toUpperCase() ||
-                              "--"}
-                          </span>
+                        <div className="w-8 h-8 rounded-full bg-pink-500/20 flex items-center justify-center overflow-hidden">
+                          <img
+                            src={
+                              order.user?.profilePic
+                                ? order.user.profilePic.startsWith("http")
+                                  ? order.user.profilePic
+                                  : order.user.profilePic
+                                : assets.defaultProfile
+                            }
+                            alt={order.user?.username}
+                            className="w-8 h-8 object-cover rounded-full"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = assets.defaultProfile;
+                            }}
+                          />
                         </div>
                         <div>
                           <p className="text-sm font-medium text-white">

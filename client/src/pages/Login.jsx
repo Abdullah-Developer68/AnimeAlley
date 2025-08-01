@@ -41,7 +41,9 @@ const Login = () => {
         navigate("/");
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "An error occurred!");
+      toast.error(
+        error.response?.data?.message || "Try again something went wrong!"
+      );
       console.error("Login error:", {
         message: error.response?.data?.message,
         status: error.response?.status,

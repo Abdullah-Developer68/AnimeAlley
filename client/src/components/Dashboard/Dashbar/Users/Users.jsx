@@ -299,16 +299,6 @@ const Users = () => {
                               }}
                             />
                           )}
-                          {!u.profilePic && (
-                            <span
-                              className="text-sm font-medium text-pink-500"
-                              style={{
-                                display: u.profilePic ? "none" : "block",
-                              }}
-                            >
-                              {u.username?.slice(0, 2).toUpperCase()}
-                            </span>
-                          )}
                         </div>
                         <div>
                           <p className="text-sm font-medium text-white">
