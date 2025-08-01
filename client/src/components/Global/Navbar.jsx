@@ -38,7 +38,7 @@ const Navbar = () => {
           </Link>
           {user && (user.role === "superAdmin" || user.role === "admin") && (
             <Link to="/dashboard">
-              <img src={assets.settings} />
+              <img src={assets.settings} alt="dashboard" />
             </Link>
           )}
 
