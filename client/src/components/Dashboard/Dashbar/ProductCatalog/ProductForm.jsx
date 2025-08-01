@@ -802,12 +802,6 @@ const ProductForm = () => {
                           </option>
                           <option
                             className="bg-gray-800 text-gray-300"
-                            value="hoodie"
-                          >
-                            Hoodie
-                          </option>
-                          <option
-                            className="bg-gray-800 text-gray-300"
                             value="jacket"
                           >
                             Jacket
@@ -873,20 +867,9 @@ const ProductForm = () => {
                       >
                         Action Figure
                       </option>
-                      <option
-                        className="bg-gray-800 text-gray-300"
-                        value="doll"
-                      >
-                        Doll
-                      </option>
+
                       <option className="bg-gray-800 text-gray-300" value="car">
                         Car
-                      </option>
-                      <option
-                        className="bg-gray-800 text-gray-300"
-                        value="puzzle"
-                      >
-                        Puzzle
                       </option>
                     </select>
                     {errors.toyType && (

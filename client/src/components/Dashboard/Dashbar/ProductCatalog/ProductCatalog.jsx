@@ -84,17 +84,14 @@ const ProductCatalog = () => {
           "Fantasy"
         );
         break;
-      case "action figures":
-        currProductTypes.push("Action Figure", "Vehicle", "Puzzle");
-        break;
       case "clothes":
-        currProductTypes.push("T-Shirts", "Jackets", "Pants");
+        currProductTypes.push("T-Shirt", "Jacket", "Pants");
         break;
       case "shoes":
         currProductTypes.push("Sneakers", "Boots");
         break;
       case "toys":
-        currProductTypes.push("Action Figures", "Cars");
+        currProductTypes.push("Action-Figure", "Car");
         break;
       default:
         break;
