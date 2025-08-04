@@ -1,5 +1,5 @@
+/* eslint-disable react/prop-types */
 import { createContext, useEffect, useState } from "react";
-import PropTypes from "prop-types";
 import api from "../api/api";
 import {
   checkAndHandleUserChange,
@@ -99,14 +99,6 @@ const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-};
-
-// prop validation
-AuthProvider.propTypes = {
-  children: PropTypes.oneOfType([
-    PropTypes.arrayOf(PropTypes.node),
-    PropTypes.node,
-  ]).isRequired,
 };
 
 export { AuthProvider, AuthContext };

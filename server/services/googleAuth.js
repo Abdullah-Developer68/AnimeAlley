@@ -55,12 +55,13 @@ const initiateGoogleAuth = (req, res, next) => {
 
 /**
  * Step 2: Handle OAuth Callback
+ * user grants permission and Google redirects back to this endpoint.
  * Processes the response after Google authenticates the user.
  *
  * Flow:
  * 1. Google redirects back with an authorization code
  * 2. Passport exchanges this code for access tokens
- * 3. Creates/updates user session
+ * 3. Creates/updates user session if there is one
  * 4. Establishes authentication state
  */
 const handleGoogleCallback = (req, res, next) => {
