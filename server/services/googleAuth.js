@@ -1,6 +1,7 @@
 const passport = require("../config/passport/passport.js");
 const jwt = require("jsonwebtoken");
-require("dotenv").config();
+const dotenv = require("dotenv");
+dotenv.config();
 const dbConnect = require("../config/dbConnect.js");
 
 const clientUrl = process.env.CLIENT_URL;
