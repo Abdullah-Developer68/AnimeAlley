@@ -13,21 +13,22 @@ const allowedOrigins = [
 
 // Enhanced CORS middleware for cross-domain production
 const corsMiddleware = cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
+  // origin: function (origin, callback) {
+  //   // Allow requests with no origin (mobile apps, Postman, etc.)
+  //   if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
+  //   if (allowedOrigins.includes(origin)) {
+  //     return callback(null, true);
+  //   }
 
-    // In development, be more permissive
-    if (process.env.NODE_ENV !== "production") {
-      return callback(null, true);
-    }
+  //   // In development, be more permissive
+  //   if (process.env.NODE_ENV !== "production") {
+  //     return callback(null, true);
+  //   }
 
-    return callback(new Error("Not allowed by CORS"));
-  },
+  //   return callback(new Error("Not allowed by CORS"));
+  // },
+  origin: true,
   credentials: true, // Essential for cross-domain cookies
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
   allowedHeaders: [
