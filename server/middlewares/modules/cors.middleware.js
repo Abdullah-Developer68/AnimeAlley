@@ -8,6 +8,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
   "https://localhost:3000",
+  "https://anime-alley-client-git-coldstart-developers-projects-86df454e.vercel.app", // TODO: Remove after testing
 ].filter(Boolean);
 
 // Enhanced CORS middleware for cross-domain production
